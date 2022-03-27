@@ -1,0 +1,60 @@
+literal = @{(!("."|"*"|"\""|"'"|"["|"]"|"="|" "|"("|")"|"{"|"}"|"|"|"<"|">"|"!") ~ ANY)+}
+
+string = _{"\"" ~ string_value ~ "\""}
+    string_value = @{(!("\"") ~ ANY)+}
+
+string_list = {string ~ ("," ~ string)*}
+
+number = @{"-"? ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* | "-"? ~ ASCII_DIGIT}
+
+decimal = @{number ~ ("." ~ ASCII_DIGIT+)?}
+
+numbers_list = {number ~ ("," ~ number)*}
+
+numbers_range = {full_range | right_range | all_range | left_range }
+    right_range = {":" ~ number}
+    all_range = {":"}
+    left_range = {number ~ ":"}
+    full_range = {number ~ ":" ~ number}
+
+from_current = {"@" ~ root?}
+from_root    = {"$" ~ root?}
+
+select_term = _{from_current | from_root}
+
+op = _{ge | gt | le | lt | eq | ne | re}
+    ge = @{">="}
+    gt = @{">"}
+    le = @{"<="}
+    lt = @{"<"}
+    eq = @{"=="}
+    ne = @{"!="}
+    re = @{"=~"}
+
+term = _{select_term | decimal | string}
+
+single_filter = {term ~ op ~ term}
+
+filter_relation = _{and | or}
+    and = {"&&"}
+    or  = {"||"}
+
+inner_filter = _{single_filter | "(" ~ filter ~ ")"}
+
+filter = {inner_filter ~ (filter_relation ~ inner_filter)?}
+
+all = {"*"}
+
+full_scan = {".."}
+
+bracket = _{numbers_range | numbers_list | string_list | all | "?" ~ filter}
+
+element = _{full_scan ~ (literal | all | "[" ~ bracket ~ "]") | "." ~ literal | "." ~ all | ("."? ~ "[" ~ bracket ~ "]")}
+
+first_element = _{literal | all}
+
+root = {(element|first_element) ~ (element)*}
+
+query = _{SOI ~ "$" ~ root? ~ EOI}
+
+WHITESPACE = _{ " " }
