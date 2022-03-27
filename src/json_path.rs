@@ -58,19 +58,24 @@ pub (crate) fn compile<'i>(s: &'i str) -> Result<Query<'i>, QueryCompilationErro
                     };
 
                     match (positives, negatives) {
-                        (None, None) => "error occured when parsing json path.".to_string(),
-                        (Some(p), None) => format!("expected one of the following: {}.", p),
-                        (None, Some(n)) => format!("unexpected tokens found: {}.", n),
-                        (Some(p), Some(n)) => format!("expected one of the following: {}, unexpected tokens found: {}.", p, n),
+                        (None, None) => "parsing error".to_string(),
+                        (Some(p), None) => format!("expected one of the following: {}", p),
+                        (None, Some(n)) => format!("unexpected tokens found: {}", n),
+                        (Some(p), Some(n)) => format!("expected one of the following: {}, unexpected tokens found: {}", p, n),
                     }
                     
                 }
                 pest::error::ErrorVariant::CustomError { ref message } => message.clone(),
             };
 
+            let final_msg = if pos == s.len() {
+                format!("\"{} <<<<----\", {}.", s, msg)
+            } else {
+                format!("\"{} ---->>>> {}\", {}.", &s[..pos], &s[pos..], msg)
+            };
             Err(QueryCompilationError{
                 location: pos,
-                message: msg,
+                message: final_msg,
             })
         }
     }
