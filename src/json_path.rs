@@ -144,8 +144,10 @@ fn create_index_trucker<'i, 'j>(index: usize, father: &'j PathTracker<'i, 'j>) -
 enum TermEvaluationResult<'i, 'j, S:SelectValue> {
     Integer(i64),
     Float(f64),
-    String(&'i str),
+    Str(&'i str),
+    String(String),
     Value(&'j S),
+    Bool(bool),
     Invalid,
 }
 
@@ -175,6 +177,15 @@ impl<'i, 'j, S:SelectValue> TermEvaluationResult<'i, 'j, S> {
                     CmpResult::Ord(Ordering::Equal)
                 }
             }
+            (TermEvaluationResult::Str(s1), TermEvaluationResult::Str(s2)) => {
+                CmpResult::Ord(s1.cmp(s2))
+            }
+            (TermEvaluationResult::Str(s1), TermEvaluationResult::String(s2)) => {
+                CmpResult::Ord((*s1).cmp(&s2))
+            }
+            (TermEvaluationResult::String(s1), TermEvaluationResult::Str(s2)) => {
+                CmpResult::Ord((&s1[..]).cmp(s2))
+            }
             (TermEvaluationResult::String(s1), TermEvaluationResult::String(s2)) => {
                 CmpResult::Ord(s1.cmp(s2))
             }
@@ -187,7 +198,7 @@ impl<'i, 'j, S:SelectValue> TermEvaluationResult<'i, 'j, S> {
                         TermEvaluationResult::Float(v.get_double()).cmp(s)
                     }
                     SelectValueType::String => {
-                        TermEvaluationResult::String(v.as_str()).cmp(s)
+                        TermEvaluationResult::Str(v.as_str()).cmp(s)
                     }
                     _ => CmpResult::NotCmparable
                 }
@@ -201,7 +212,7 @@ impl<'i, 'j, S:SelectValue> TermEvaluationResult<'i, 'j, S> {
                         self.cmp(&TermEvaluationResult::Float(v.get_double()))
                     }
                     SelectValueType::String => {
-                        self.cmp(&TermEvaluationResult::String(v.as_str()))
+                        self.cmp(&TermEvaluationResult::Str(v.as_str()))
                     }
                     _ => CmpResult::NotCmparable
                 }
@@ -240,9 +251,17 @@ impl<'i, 'j, S:SelectValue> TermEvaluationResult<'i, 'j, S> {
     }
 
     fn eq(&self, s: &Self) -> bool {
-        match self.cmp(s) {
-            CmpResult::Ord(o) => o.is_eq(),
-            CmpResult::NotCmparable => false,
+        if let (TermEvaluationResult::Value(v1), TermEvaluationResult::Value(v2)) = (self, s) {
+            if v1 == v2 {
+                true
+            } else {
+                false
+            }
+        } else {
+            match self.cmp(s) {
+                CmpResult::Ord(o) => o.is_eq(),
+                CmpResult::NotCmparable => false,
+           }
         }
     }
 
@@ -302,13 +321,13 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                 if let Some(pt) = path_tracker {
                     let items = json.items().unwrap();
                     for (key, val) in items {
-                        self.calc_internal(pairs.clone(), val, Some(create_str_trucker(key, &pt)), calc_data);
+                        self.calc_internal(pairs.clone(), val, Some(create_str_trucker(key, &pt)), calc_data, false);
                         self.calc_full_scan(pairs.clone(), val, Some(create_str_trucker(key, &pt)), calc_data);
                     }
                 } else {
                     let values = json.values().unwrap();
                     for v in values {
-                        self.calc_internal(pairs.clone(), v, None, calc_data);
+                        self.calc_internal(pairs.clone(), v, None, calc_data, false);
                         self.calc_full_scan(pairs.clone(), v, None, calc_data);
                     }
                 }
@@ -317,12 +336,12 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                 let values = json.values().unwrap();
                 if let Some(pt) = path_tracker {
                     for (i, v) in values.enumerate() {
-                        self.calc_internal(pairs.clone(), v, Some(create_index_trucker(i, &pt)), calc_data);
+                        self.calc_internal(pairs.clone(), v, Some(create_index_trucker(i, &pt)), calc_data, false);
                         self.calc_full_scan(pairs.clone(), v, Some(create_index_trucker(i, &pt)), calc_data);
                     }
                 } else {
                     for v in values {
-                        self.calc_internal(pairs.clone(), v, None, calc_data);
+                        self.calc_internal(pairs.clone(), v, None, calc_data, false);
                         self.calc_full_scan(pairs.clone(), v, None, calc_data);
                     }
                 }
@@ -342,12 +361,12 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                     let items = json.items().unwrap();
                     for (key, val) in items {
                         let new_tracker = Some(create_str_trucker(key, &pt));
-                        self.calc_internal(pairs.clone(), val, new_tracker, calc_data);
+                        self.calc_internal(pairs.clone(), val, new_tracker, calc_data, true);
                     }
                 } else {
                     let values = json.values().unwrap();
                     for v in values {
-                        self.calc_internal(pairs.clone(), v, None, calc_data);
+                        self.calc_internal(pairs.clone(), v, None, calc_data, true);
                     }
                 }
             }
@@ -356,11 +375,11 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                 if let Some(pt) = path_tracker {
                     for (i, v) in values.enumerate() {
                         let new_tracker = Some(create_index_trucker(i, &pt));
-                        self.calc_internal(pairs.clone(), v, new_tracker, calc_data);
+                        self.calc_internal(pairs.clone(), v, new_tracker, calc_data, true);
                     }
                 } else {
                     for v in values {
-                        self.calc_internal(pairs.clone(), v, None, calc_data);
+                        self.calc_internal(pairs.clone(), v, None, calc_data, true);
                     }
                 }
             }
@@ -378,9 +397,9 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
         if let Some(e) = curr_val {
             if let Some(pt) = path_tracker {
                 let new_tracker = Some(create_str_trucker(curr.as_str(), &pt));
-                self.calc_internal(pairs, e, new_tracker, calc_data);
+                self.calc_internal(pairs, e, new_tracker, calc_data, true);
             } else {
-                self.calc_internal(pairs, e, None, calc_data);
+                self.calc_internal(pairs, e, None, calc_data, true);
             }
             
         }
@@ -395,18 +414,28 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
         if let Some(pt) = path_tracker {
             for c in curr.into_inner() {
                 let s = c.as_str();
-                let curr_val = json.get_key(s);
+                let curr_val = match c.as_rule() {
+                    Rule::string_value => json.get_key(s),
+                    Rule::string_value_escape_1 => json.get_key(&(s.replace("\\\\", "\\").replace("\\'", "'"))),
+                    Rule::string_value_escape_2 => json.get_key(&(s.replace("\\\\", "\\").replace("\\\"", "\""))),
+                    _ => panic!("{}", format!("{:?}", c))
+                };
                 if let Some(e) = curr_val {
                     let new_tracker = Some(create_str_trucker(s, &pt));
-                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data);
+                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data, true);
                 }
             }
         } else {
             for c in curr.into_inner() {
                 let s = c.as_str();
-                let curr_val = json.get_key(s);
+                let curr_val = match c.as_rule() {
+                    Rule::string_value => json.get_key(s),
+                    Rule::string_value_escape_1 => json.get_key(&(s.replace("\\\\", "\\").replace("\\\"", "\""))),
+                    Rule::string_value_escape_2 => json.get_key(&(s.replace("\\\\", "\\").replace("\\'", "'"))),
+                    _ => panic!("{}", format!("{:?}", c))
+                };
                 if let Some(e) = curr_val {
-                    self.calc_internal(pairs.clone(), e, None, calc_data);
+                    self.calc_internal(pairs.clone(), e, None, calc_data, true);
                 }
             }
         }
@@ -436,7 +465,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                 let curr_val = json.get_index(i);
                 if let Some(e) = curr_val {
                     let new_tracker = Some(create_index_trucker(i, &pt));
-                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data);
+                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data, true);
                 }
             }
         } else {
@@ -444,7 +473,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                 let i = self.calc_abs_index(c.as_str().parse::<i64>().unwrap(), n);
                 let curr_val = json.get_index(i);
                 if let Some(e) = curr_val {
-                    self.calc_internal(pairs.clone(), e, None, calc_data);
+                    self.calc_internal(pairs.clone(), e, None, calc_data, true);
                 }
             }
         }
@@ -461,39 +490,61 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
         }
         let n = json.len().unwrap();
         let curr = curr.into_inner().next().unwrap();
-        let (start, end) = match curr.as_rule() {
+        let (start, end, step) = match curr.as_rule() {
             Rule::right_range => {
-                (0, self.calc_abs_index(curr.into_inner().next().unwrap().as_str().parse::<i64>().unwrap(), n))
+                let mut curr = curr.into_inner();
+                let start = 0;
+                let end = self.calc_abs_index(curr.next().unwrap().as_str().parse::<i64>().unwrap(), n);
+                let step = match curr.next() {
+                    Some(s) => s.as_str().parse::<usize>().unwrap(),
+                    None => 1,
+                };
+                (start, end, step)
             }
             Rule::all_range => {
-                (0, n)
+                let mut curr = curr.into_inner();
+                let step = match curr.next() {
+                    Some(s) => s.as_str().parse::<usize>().unwrap(),
+                    None => 1,
+                };
+                (0, n, step)
             }
             Rule::left_range => {
-                (self.calc_abs_index(curr.into_inner().next().unwrap().as_str().parse::<i64>().unwrap(), n), n)
+                let mut curr = curr.into_inner();
+                let start = self.calc_abs_index(curr.next().unwrap().as_str().parse::<i64>().unwrap(), n);
+                let end = n;
+                let step = match curr.next() {
+                    Some(s) => s.as_str().parse::<usize>().unwrap(),
+                    None => 1,
+                };
+                (start, end, step)
             }
             Rule::full_range => {
                 let mut curr = curr.into_inner();
-                (
-                    self.calc_abs_index(curr.next().unwrap().as_str().parse::<i64>().unwrap(), n),
-                    self.calc_abs_index(curr.next().unwrap().as_str().parse::<i64>().unwrap(), n)
-                )
+                let start = self.calc_abs_index(curr.next().unwrap().as_str().parse::<i64>().unwrap(), n);
+                let end = self.calc_abs_index(curr.next().unwrap().as_str().parse::<i64>().unwrap(), n);
+                let step = match curr.next() {
+                    Some(s) => s.as_str().parse::<usize>().unwrap(),
+                    None => 1,
+                };
+                (start, end, step)
             }
             _ => panic!("{}", format!("{:?}", curr))
         };
         
         if let Some(pt) = path_tracker {
-            for i in start..end {
+            for i in (start..end).step_by(step) {
                 let curr_val = json.get_index(i);
                 if let Some(e) = curr_val {
                     let new_tracker = Some(create_index_trucker(i, &pt));
-                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data);
+                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data, true);
                 }
             }
         } else {
-            for i in start..end {
+            for i in (start..end).step_by(step) {
                 let curr_val = json.get_index(i);
                 if let Some(e) = curr_val {
-                    self.calc_internal(pairs.clone(), e, None, calc_data);
+                    self.calc_internal(pairs.clone(), e, None, calc_data, true);
                 }
             }
         }
@@ -512,8 +563,20 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                     TermEvaluationResult::Float(term.as_str().parse::<f64>().unwrap())
                 }
             }
+            Rule::boolean_true => {
+                TermEvaluationResult::Bool(true)
+            }
+            Rule::boolean_false => {
+                TermEvaluationResult::Bool(false)
+            }
             Rule::string_value => {
-                TermEvaluationResult::String(term.as_str())
+                TermEvaluationResult::Str(term.as_str())
+            }
+            Rule::string_value_escape_1 => {
+                TermEvaluationResult::String(term.as_str().replace("\\\\", "\\").replace("\\'", "'"))
+            }
+            Rule::string_value_escape_2 => {
+                TermEvaluationResult::String(term.as_str().replace("\\\\", "\\").replace("\\\"", "\""))
             }
             Rule::from_current => {
                 match term.into_inner().next() {
@@ -522,7 +585,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                             results: Vec::new(),
                             root: json,
                         };
-                        self.calc_internal(term.into_inner(), json, None, &mut calc_data);
+                        self.calc_internal(term.into_inner(), json, None, &mut calc_data, false);
                         if calc_data.results.len() == 1 {
                             TermEvaluationResult::Value(calc_data.results.pop().unwrap().res)
                         } else {
@@ -539,7 +602,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                             results: Vec::new(),
                             root: calc_data.root,
                         };
-                        self.calc_internal(term.into_inner(), calc_data.root, None, &mut new_calc_data);
+                        self.calc_internal(term.into_inner(), calc_data.root, None, &mut new_calc_data, false);
                         if new_calc_data.results.len() == 1 {
                             TermEvaluationResult::Value(new_calc_data.results.pop().unwrap().res)
                         } else {
@@ -562,19 +625,25 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
     {
         let mut curr = curr.into_inner();
         let term1 = curr.next().unwrap();
-        let op = curr.next().unwrap();
-        let term2 = curr.next().unwrap();
         let term1_val = self.evaluate_single_term(term1, json, calc_data);
-        let term2_val = self.evaluate_single_term(term2, json, calc_data);
-        match op.as_rule() {
-            Rule::gt => term1_val.gt(&term2_val),
-            Rule::ge => term1_val.ge(&term2_val),
-            Rule::lt => term1_val.lt(&term2_val),
-            Rule::le => term1_val.le(&term2_val),
-            Rule::eq => term1_val.eq(&term2_val),
-            Rule::ne => term1_val.ne(&term2_val),
-            Rule::re => term1_val.re(&term2_val),
-            _ => panic!("{}", format!("{:?}", op))
+        if let Some(op) = curr.next() {
+            let term2 = curr.next().unwrap();
+            let term2_val = self.evaluate_single_term(term2, json, calc_data);
+            match op.as_rule() {
+                Rule::gt => term1_val.gt(&term2_val),
+                Rule::ge => term1_val.ge(&term2_val),
+                Rule::lt => term1_val.lt(&term2_val),
+                Rule::le => term1_val.le(&term2_val),
+                Rule::eq => term1_val.eq(&term2_val),
+                Rule::ne => term1_val.ne(&term2_val),
+                Rule::re => term1_val.re(&term2_val),
+                _ => panic!("{}", format!("{:?}", op))
+            }
+        } else {
+            match term1_val {
+                TermEvaluationResult::Invalid => false,
+                _ => true,
+            }
         }
     }
 
@@ -641,14 +710,15 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
     fn calc_internal<'j:'i, 'k, 'l, S:SelectValue>(&self, mut pairs: Pairs<'i, Rule>, 
                                         json: &'j S, 
                                         path_tracker: Option<PathTracker<'l, 'k>>,
-                                        calc_data: &mut PathCalculatorData<'j, S, UPTG::PT>)
+                                        calc_data: &mut PathCalculatorData<'j, S, UPTG::PT>,
+                                        flat_arrays_on_filter: bool)
     {
         let curr = pairs.next();
         match curr {
             Some(curr) => {
                 match curr.as_rule() {
                     Rule::full_scan => {
-                        self.calc_internal(pairs.clone(), json, path_tracker.clone(), calc_data);
+                        self.calc_internal(pairs.clone(), json, path_tracker.clone(), calc_data, false);
                         self.calc_full_scan(pairs, json, path_tracker, calc_data)
                     }
                     Rule::all => {
@@ -667,7 +737,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                         self.calc_range(pairs, curr, json, path_tracker, calc_data)
                     }
                     Rule::filter => {
-                        if json.get_type() == SelectValueType::Array {
+                        if flat_arrays_on_filter && json.get_type() == SelectValueType::Array {
                             /* lets expend the array, this is how most json path engines work.
                              * Pesonally, I think this if should not exists. */
                             let values = json.values().unwrap();
@@ -675,19 +745,19 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                                 for (i, v) in values.enumerate() {
                                     if self.evaluate_filter(curr.clone(), v, calc_data) {
                                         let new_tracker = Some(create_index_trucker(i, &pt));
-                                        self.calc_internal(pairs.clone(), v, new_tracker, calc_data);
+                                        self.calc_internal(pairs.clone(), v, new_tracker, calc_data, true);
                                     }
                                 }
                             } else {
                                 for v in values {
                                     if self.evaluate_filter(curr.clone(), v, calc_data) {
-                                        self.calc_internal(pairs.clone(), v, None, calc_data);
+                                        self.calc_internal(pairs.clone(), v, None, calc_data, true);
                                     }
                                 }
                             }
                         } else {
                             if self.evaluate_filter(curr.clone(), json, calc_data) {
-                                self.calc_internal(pairs, json, path_tracker, calc_data);
+                                self.calc_internal(pairs, json, path_tracker, calc_data, true);
                             }
                         }
                     }
@@ -723,9 +793,9 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
             root: json,
         };
         if self.tracker_generator.is_some() {
-            self.calc_internal(root.into_inner(), json, Some(create_empty_trucker()), &mut calc_data);
+            self.calc_internal(root.into_inner(), json, Some(create_empty_trucker()), &mut calc_data, true);
         } else {
-            self.calc_internal(root.into_inner(), json, None, &mut calc_data);
+            self.calc_internal(root.into_inner(), json, None, &mut calc_data, true);
         }
         calc_data.results.drain(..).collect()
     }

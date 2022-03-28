@@ -358,7 +358,7 @@ mod json_path_tests {
 
     #[test]
     fn test_filter_with_full_scan() {
-        verify_json!(path:"$..[?(@.code==\"2\")].code", json:[{"code":"1"},{"code":"2"}], results:["2", "2"]);
+        verify_json!(path:"$..[?(@.code==\"2\")].code", json:[{"code":"1"},{"code":"2"}], results:["2"]);
     }
 
     #[test]
