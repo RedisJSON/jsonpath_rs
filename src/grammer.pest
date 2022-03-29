@@ -1,4 +1,4 @@
-complex_literal = _{(!("."|"*"|"\""|"'"|"["|"]"|"="|" "|"("|")"|"{"|"}"|"|"|"<"|">"|"!") ~ ANY)+}
+complex_literal = _{(!("."|"*"|"\""|"'"|"["|"]"|"="|" "|"("|")"|"{"|"}"|"|"|"<"|">"|"!"|",") ~ ANY)+}
 literal = @{('a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | "-" | "_")+ | complex_literal}
 
 string = _{("'" ~ (string_value) ~ "'") | ("\"" ~ (string_value) ~ "\"") | ("\"" ~ (string_value_escape_1) ~ "\"") | ("'" ~ (string_value_escape_2) ~ "'")}
@@ -64,6 +64,10 @@ first_element = _{literal | all}
 
 root = {(element|first_element) ~ (element)*}
 
+simple_root = {"." ~ literal}
+
 query = _{SOI ~ "$" ~ root? ~ EOI}
+
+simple_query = _{SOI ~ "$" ~ simple_root ~ EOI}
 
 WHITESPACE = _{ " " }

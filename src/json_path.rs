@@ -14,7 +14,7 @@ pub struct JsonPathParser;
 #[derive(Debug)]
 pub struct Query<'i>{
     // query: QueryElement<'i>
-    query: Pairs<'i, Rule>,
+    pub query: Pairs<'i, Rule>,
 }
 
 #[derive(Debug)]
@@ -104,6 +104,43 @@ impl UserPathTrackerGenerator for DummyTrackerGenerator {
     type PT = DummyTracker;
     fn generate(&self) -> Self::PT {
         DummyTracker
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum PTrackerElement {
+    Key(String),
+    Index(usize),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct PTracker {
+    pub elemenets: Vec<PTrackerElement>,
+}
+impl UserPathTracker for PTracker {
+    fn add_str(&mut self, s: &str){
+        self.elemenets.push(PTrackerElement::Key(s.to_string()))
+    }
+
+    fn add_index(&mut self, i: usize){
+        self.elemenets.push(PTrackerElement::Index(i))
+    }
+
+    fn to_string_path(self) -> Vec<String> {
+        self.elemenets.into_iter().map(|e|{
+            match e {
+                PTrackerElement::Key(s) => s,
+                PTrackerElement::Index(i) => i.to_string(),
+            }
+        }).collect()
+    }
+}
+
+pub struct PTrackerGenerator;
+impl UserPathTrackerGenerator for PTrackerGenerator {
+    type PT = PTracker;
+    fn generate(&self) -> Self::PT {
+        PTracker{elemenets: Vec::new()}
     }
 }
 
@@ -279,8 +316,8 @@ impl<'i, 'j, S:SelectValue> TermEvaluationResult<'i, 'j, S> {
 
 #[derive(Debug)]
 pub struct PathCalculator<'i, UPTG: UserPathTrackerGenerator>{
-    query: Option<&'i Query<'i>>,
-    tracker_generator: Option<UPTG>,
+    pub query: Option<&'i Query<'i>>,
+    pub tracker_generator: Option<UPTG>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -785,9 +822,8 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
         }
     }
 
-    pub fn calc_with_paths<'j:'i, S:SelectValue>(&self, json: &'j S) -> Vec<CalculationResult<'j, S, UPTG::PT>>
+    pub fn calc_with_paths_on_root<'j:'i, S:SelectValue>(&self, json: &'j S, root: Pair<Rule>) -> Vec<CalculationResult<'j, S, UPTG::PT>>
     {
-        let root = self.query.unwrap().query.clone().next().unwrap();
         let mut calc_data = PathCalculatorData{
             results: Vec::new(),
             root: json,
@@ -799,18 +835,10 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
         }
         calc_data.results.drain(..).collect()
     }
-
-    pub fn calc_once<'j, 'p, S:SelectValue>(mut q: Query<'j>, json: &'p S) -> Vec<&'p S> {
-        let root = q.query.next().unwrap();
-        let mut calc_data = PathCalculatorData{
-            results: Vec::new(),
-            root: json,
-        };
-        PathCalculator::<'p, DummyTrackerGenerator> {
-            query: None,
-            tracker_generator: None,
-        }.calc_internal(root.into_inner(), json, None, &mut calc_data, true);
-        calc_data.results.into_iter().map(|e: CalculationResult<'p, S, DummyTracker>| e.res).collect()
+    
+    pub fn calc_with_paths<'j:'i, S:SelectValue>(&self, json: &'j S) -> Vec<CalculationResult<'j, S, UPTG::PT>>
+    {
+        self.calc_with_paths_on_root(json, self.query.unwrap().query.clone().next().unwrap())
     }
 
     pub fn calc<'j:'i, S:SelectValue>(&self, json: &'j S) -> Vec<&'j S>
