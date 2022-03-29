@@ -279,7 +279,7 @@ impl<'i, 'j, S:SelectValue> TermEvaluationResult<'i, 'j, S> {
 
 #[derive(Debug)]
 pub struct PathCalculator<'i, UPTG: UserPathTrackerGenerator>{
-    query: &'i Query<'i>,
+    query: Option<&'i Query<'i>>,
     tracker_generator: Option<UPTG>,
 }
 
@@ -299,14 +299,14 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
 
     pub fn create(query: &'i Query<'i>) -> PathCalculator<'i, UPTG> {
         PathCalculator {
-            query: query,
+            query: Some(query),
             tracker_generator: None,
         }
     }
 
     pub fn create_with_generator(query: &'i Query<'i>, tracker_generator: UPTG) -> PathCalculator<'i, UPTG> {
         PathCalculator {
-            query: query,
+            query: Some(query),
             tracker_generator: Some(tracker_generator),
         }
     }
@@ -787,7 +787,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
 
     pub fn calc_with_paths<'j:'i, S:SelectValue>(&self, json: &'j S) -> Vec<CalculationResult<'j, S, UPTG::PT>>
     {
-        let root = self.query.query.clone().next().unwrap();
+        let root = self.query.unwrap().query.clone().next().unwrap();
         let mut calc_data = PathCalculatorData{
             results: Vec::new(),
             root: json,
@@ -798,6 +798,19 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
             self.calc_internal(root.into_inner(), json, None, &mut calc_data, true);
         }
         calc_data.results.drain(..).collect()
+    }
+
+    pub fn calc_once<'j, 'p, S:SelectValue>(mut q: Query<'j>, json: &'p S) -> Vec<&'p S> {
+        let root = q.query.next().unwrap();
+        let mut calc_data = PathCalculatorData{
+            results: Vec::new(),
+            root: json,
+        };
+        PathCalculator::<'p, DummyTrackerGenerator> {
+            query: None,
+            tracker_generator: None,
+        }.calc_internal(root.into_inner(), json, None, &mut calc_data, true);
+        calc_data.results.into_iter().map(|e: CalculationResult<'p, S, DummyTracker>| e.res).collect()
     }
 
     pub fn calc<'j:'i, S:SelectValue>(&self, json: &'j S) -> Vec<&'j S>

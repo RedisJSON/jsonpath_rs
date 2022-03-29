@@ -1,4 +1,5 @@
-literal = @{(!("."|"*"|"\""|"'"|"["|"]"|"="|" "|"("|")"|"{"|"}"|"|"|"<"|">"|"!") ~ ANY)+}
+complex_literal = _{(!("."|"*"|"\""|"'"|"["|"]"|"="|" "|"("|")"|"{"|"}"|"|"|"<"|">"|"!") ~ ANY)+}
+literal = @{('a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | "-" | "_")+ | complex_literal}
 
 string = _{("'" ~ (string_value) ~ "'") | ("\"" ~ (string_value) ~ "\"") | ("\"" ~ (string_value_escape_1) ~ "\"") | ("'" ~ (string_value_escape_2) ~ "'")}
     string_escape = @{"\\"}
@@ -57,7 +58,7 @@ full_scan = {".."}
 
 bracket = _{numbers_range | numbers_list | string_list | all | "?" ~ filter}
 
-element = _{full_scan ~ (literal | all | "[" ~ bracket ~ "]") | "." ~ literal | "." ~ all | ("."? ~ "[" ~ bracket ~ "]")}
+element = _{"." ~ literal | full_scan ~ (literal | all | "[" ~ bracket ~ "]") | "." ~ all | ("."? ~ "[" ~ bracket ~ "]")}
 
 first_element = _{literal | all}
 
