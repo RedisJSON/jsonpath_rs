@@ -29,6 +29,22 @@ impl std::fmt::Display for QueryCompilationError {
     }
 }
 
+impl std::fmt::Display for Rule {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            Rule::literal => write!(f, "<string>"),
+            Rule::all => write!(f, "'*'"),
+            Rule::full_scan => write!(f, "'..'"),
+            Rule::numbers_list => write!(f, "'<number>[,<number>,...]'"),
+            Rule::string_list => write!(f, "'<string>[,<string>,...]'"),
+            Rule::numbers_range => write!(f, "['start:end:steps']"),
+            Rule::number => write!(f, "'<number>'"),
+            Rule::filter => write!(f, "'[?(filter_expression)]'"),
+            _ => write!(f, "{:?}", self)
+        }
+    }
+}
+
 pub (crate) fn compile<'i>(s: &'i str) -> Result<Query<'i>, QueryCompilationError> {
     let q = JsonPathParser::parse(Rule::query, s);
     match q {
@@ -47,12 +63,12 @@ pub (crate) fn compile<'i>(s: &'i str) -> Result<Query<'i>, QueryCompilationErro
                     ref negatives,
                 } => {
                     let positives = if positives.len() > 0 {
-                        Some(positives.iter().map(|v| format!("{:?}", v)).collect::<Vec<_>>().join(", "))
+                        Some(positives.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(", "))
                     } else {
                         None
                     };
                     let negatives = if negatives.len() > 0 {
-                        Some(negatives.iter().map(|v| format!("{:?}", v)).collect::<Vec<_>>().join(", "))
+                        Some(negatives.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(", "))
                     } else {
                         None
                     };
