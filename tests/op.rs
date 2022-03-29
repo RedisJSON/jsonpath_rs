@@ -315,7 +315,7 @@ fn op_ne_for_complex_value() {
     select_and_then_compare(
         r#"$.[?("1" != @.a)]"#,
         json!({ "a": { "b": 1 } }),
-        json!([]),
+        json!([{ "a": { "b": 1 } }]),
     );
 }
 

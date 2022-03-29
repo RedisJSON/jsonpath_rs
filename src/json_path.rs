@@ -304,24 +304,50 @@ impl<'i, 'j, S:SelectValue> TermEvaluationResult<'i, 'j, S> {
     }
 
     fn eq(&self, s: &Self) -> bool {
-        if let (TermEvaluationResult::Value(v1), TermEvaluationResult::Value(v2)) = (self, s) {
-            if v1 == v2 {
-                true
-            } else {
-                false
+        match (self, s){
+            (TermEvaluationResult::Bool(b1), TermEvaluationResult::Bool(b2)) => {
+                if *b1 == *b2 {
+                    true
+                } else {
+                    false
+                }
             }
-        } else {
-            match self.cmp(s) {
-                CmpResult::Ord(o) => o.is_eq(),
-                CmpResult::NotCmparable => false,
-           }
+            (TermEvaluationResult::Value(v1), TermEvaluationResult::Bool(b2)) => {
+                if v1.get_type() == SelectValueType::Bool {
+                    let b1 = v1.get_bool();
+                    if b1 == *b2 {
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            (TermEvaluationResult::Bool(_), TermEvaluationResult::Value(_)) => {
+                s.eq(self)
+            }
+            (TermEvaluationResult::Value(v1), TermEvaluationResult::Value(v2)) => {
+                if v1 == v2 {
+                    true
+                } else {
+                    false
+                }
+            }
+            (_, _) => {
+                match self.cmp(s) {
+                    CmpResult::Ord(o) => o.is_eq(),
+                    CmpResult::NotCmparable => false,
+               }
+            }
         }
     }
 
     fn ne(&self, s: &Self) -> bool {
-        match self.cmp(s) {
-            CmpResult::Ord(o) => o.is_ne(),
-            CmpResult::NotCmparable => false,
+        if self.eq(s) {
+            false
+        } else {
+            true
         }
     }
 

@@ -373,6 +373,12 @@ mod json_path_tests {
     }
 
     #[test]
+    fn test_filter_bool() {
+        verify_json!(path:"$.*[?(@==true)]", json:{"a":true, "b":false}, results:[true]);
+        verify_json!(path:"$.*[?(@==false)]", json:{"a":true, "b":false}, results:[false]);
+    }
+
+    #[test]
     fn test_complex_filter_from_root() {
         verify_json!(path:"$.bar.*[?@ == $.foo]",
                      json:{"foo":1, "bar":{"a":[1,2,3], "b":[4,5,6]}},
