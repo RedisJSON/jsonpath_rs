@@ -32,20 +32,20 @@ use json_path::{
 /// let json_obj = json!({
 ///     "school": {
 ///         "friends": [
-///             {"name": "친구1", "age": 20},
-///             {"name": "친구2", "age": 20}
+///             {"name": "foo1", "age": 20},
+///             {"name": "foo2", "age": 20}
 ///         ]
 ///     },
 ///     "friends": [
-///         {"name": "친구3", "age": 30},
-///         {"name": "친구4"}
+///         {"name": "foo3", "age": 30},
+///         {"name": "foo4"}
 /// ]});
 ///
 /// let json = calculator.calc(&json_obj);
 ///
 /// assert_eq!(json, vec![
-///     &json!({"name": "친구3", "age": 30}),
-///     &json!({"name": "친구1", "age": 20})
+///     &json!({"name": "foo3", "age": 30}),
+///     &json!({"name": "foo1", "age": 20})
 /// ]);
 /// ```
 pub fn create<'i>(query: &'i Query<'i>) -> PathCalculator<'i, DummyTrackerGenerator> {
