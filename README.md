@@ -1,3 +1,8 @@
+[![license](https://img.shields.io/github/license/RedisJSON/JsonPathCalculator.svg)](https://github.com/RedisJSON/JsonPathCalculator/blob/master/LICENSE)
+[![GitHub issues](https://img.shields.io/github/release/RedisJSON/JsonPathCalculator.svg)](https://github.com/RedisJSON/JsonPathCalculator/releases/latest)
+[![Rust](https://github.com/RedisJSON/JsonPathCalculator/actions/workflows/rust.yml/badge.svg)](https://github.com/RedisJSON/JsonPathCalculator/actions/workflows/rust.yml)
+[![crates.io](https://img.shields.io/crates/v/JsonPathCalculator.svg)](https://crates.io/crates/JsonPathCalculator)
+
 # JsonPathCalculator
 Json path calculator library for rust. The idea behind this library is that it can operate on any json representation as long as it implements the [`SelectValue`](src/select_value.rs) triat. The library has an implementation for [serde_json value](https://docs.serde.rs/serde_json/value/enum.Value.html) and [ivalue](https://docs.rs/tch/0.1.1/tch/enum.IValue.html).
 
