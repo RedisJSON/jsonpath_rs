@@ -186,11 +186,10 @@ impl SelectValue for IValue {
     }
 
     fn len(&self) -> Option<usize> {
-        if let Some(arr) = self.as_array() {
-            Some(arr.len())
-        } else {
-            self.as_object().map(|obj| obj.len())
-        }
+        self.as_array().map_or_else(
+            || self.as_object().map(ijson::IObject::len),
+            |arr| Some(arr.len()),
+        )
     }
 
     fn get_key<'a>(&'a self, key: &str) -> Option<&'a Self> {

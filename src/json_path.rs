@@ -47,9 +47,9 @@ impl std::fmt::Display for Rule {
     }
 }
 
-pub(crate) fn compile(s: &str) -> Result<Query, QueryCompilationError> {
-    let q = JsonPathParser::parse(Rule::query, s);
-    match q {
+pub(crate) fn compile(path: &str) -> Result<Query, QueryCompilationError> {
+    let query = JsonPathParser::parse(Rule::query, path);
+    match query {
         Ok(q) => Ok(Query { query: q }),
         // pest::error::Error
         Err(e) => {
@@ -62,7 +62,9 @@ pub(crate) fn compile(s: &str) -> Result<Query, QueryCompilationError> {
                     ref positives,
                     ref negatives,
                 } => {
-                    let positives = if !positives.is_empty() {
+                    let positives = if positives.is_empty() {
+                        None
+                    } else {
                         Some(
                             positives
                                 .iter()
@@ -70,10 +72,10 @@ pub(crate) fn compile(s: &str) -> Result<Query, QueryCompilationError> {
                                 .collect::<Vec<_>>()
                                 .join(", "),
                         )
-                    } else {
-                        None
                     };
-                    let negatives = if !negatives.is_empty() {
+                    let negatives = if negatives.is_empty() {
+                        None
+                    } else {
                         Some(
                             negatives
                                 .iter()
@@ -81,8 +83,6 @@ pub(crate) fn compile(s: &str) -> Result<Query, QueryCompilationError> {
                                 .collect::<Vec<_>>()
                                 .join(", "),
                         )
-                    } else {
-                        None
                     };
 
                     match (positives, negatives) {
@@ -98,10 +98,10 @@ pub(crate) fn compile(s: &str) -> Result<Query, QueryCompilationError> {
                 pest::error::ErrorVariant::CustomError { ref message } => message.clone(),
             };
 
-            let final_msg = if pos == s.len() {
-                format!("\"{} <<<<----\", {}.", s, msg)
+            let final_msg = if pos == path.len() {
+                format!("\"{} <<<<----\", {}.", path, msg)
             } else {
-                format!("\"{} ---->>>> {}\", {}.", &s[..pos], &s[pos..], msg)
+                format!("\"{} ---->>>> {}\", {}.", &path[..pos], &path[pos..], msg)
             };
             Err(QueryCompilationError {
                 location: pos,
@@ -151,11 +151,11 @@ pub struct PTracker {
 }
 impl UserPathTracker for PTracker {
     fn add_str(&mut self, s: &str) {
-        self.elemenets.push(PTrackerElement::Key(s.to_string()))
+        self.elemenets.push(PTrackerElement::Key(s.to_string()));
     }
 
     fn add_index(&mut self, i: usize) {
-        self.elemenets.push(PTrackerElement::Index(i))
+        self.elemenets.push(PTrackerElement::Index(i));
     }
 
     fn to_string_path(self) -> Vec<String> {
@@ -192,21 +192,21 @@ struct PathTracker<'i, 'j> {
     element: PathTrackerElement<'i>,
 }
 
-fn create_empty_trucker<'i, 'j>() -> PathTracker<'i, 'j> {
+const fn create_empty_trucker<'i, 'j>() -> PathTracker<'i, 'j> {
     PathTracker {
         father: None,
         element: PathTrackerElement::Root,
     }
 }
 
-fn create_str_trucker<'i, 'j>(s: &'i str, father: &'j PathTracker<'i, 'j>) -> PathTracker<'i, 'j> {
+const fn create_str_trucker<'i, 'j>(s: &'i str, father: &'j PathTracker<'i, 'j>) -> PathTracker<'i, 'j> {
     PathTracker {
         father: Some(father),
         element: PathTrackerElement::Key(s),
     }
 }
 
-fn create_index_trucker<'i, 'j>(
+const fn create_index_trucker<'i, 'j>(
     index: usize,
     father: &'j PathTracker<'i, 'j>,
 ) -> PathTracker<'i, 'j> {
@@ -785,7 +785,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
 
     fn populate_path_tracker<'k, 'l>(&self, pt: &PathTracker<'l, 'k>, upt: &mut UPTG::PT) {
         if let Some(f) = pt.father {
-            self.populate_path_tracker(f, upt)
+            self.populate_path_tracker(f, upt);
         }
         match pt.element {
             PathTrackerElement::Index(i) => upt.add_index(i),
@@ -820,18 +820,18 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                             calc_data,
                             false,
                         );
-                        self.calc_full_scan(pairs, json, path_tracker, calc_data)
+                        self.calc_full_scan(pairs, json, path_tracker, calc_data);
                     }
                     Rule::all => self.calc_all(pairs, json, path_tracker, calc_data),
                     Rule::literal => self.calc_literal(pairs, curr, json, path_tracker, calc_data),
                     Rule::string_list => {
-                        self.calc_strings(pairs, curr, json, path_tracker, calc_data)
+                        self.calc_strings(pairs, curr, json, path_tracker, calc_data);
                     }
                     Rule::numbers_list => {
-                        self.calc_indexes(pairs, curr, json, path_tracker, calc_data)
+                        self.calc_indexes(pairs, curr, json, path_tracker, calc_data);
                     }
                     Rule::numbers_range => {
-                        self.calc_range(pairs, curr, json, path_tracker, calc_data)
+                        self.calc_range(pairs, curr, json, path_tracker, calc_data);
                     }
                     Rule::filter => {
                         if flat_arrays_on_filter && json.get_type() == SelectValueType::Array {

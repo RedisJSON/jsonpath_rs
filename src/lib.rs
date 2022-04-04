@@ -54,7 +54,7 @@ pub fn create_with_generator<'i>(query: &'i Query<'i>) -> PathCalculator<'i, PTr
 }
 
 /// Compile the given json path, compilation results can after be used
-/// to create PathCalculator calculator object to calculate json paths
+/// to create `PathCalculator` calculator object to calculate json paths
 pub fn compile(s: &str) -> Result<Query, QueryCompilationError> {
     json_path::compile(s)
 }
