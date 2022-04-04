@@ -3,9 +3,9 @@ extern crate pest;
 extern crate pest_derive;
 extern crate serde_json;
 
+mod json_node;
 mod json_path;
 mod select_value;
-mod json_node;
 
 use serde_json::Value;
 use std::env;
@@ -33,7 +33,8 @@ fn main() {
         process::exit(1);
     }
     let v: Value = v.unwrap();
-    let path_calculator = json_path::PathCalculator::<json_path::DummyTrackerGenerator>::create(&query);
+    let path_calculator =
+        json_path::PathCalculator::<json_path::DummyTrackerGenerator>::create(&query);
     let res = path_calculator.calc(&v);
     for r in res {
         println!("{}", r);
