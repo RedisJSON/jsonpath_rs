@@ -3,21 +3,14 @@ extern crate pest;
 extern crate pest_derive;
 extern crate serde_json;
 
-pub mod select_value;
-pub mod json_path;
 pub mod json_node;
+pub mod json_path;
+pub mod select_value;
 
-use crate::select_value::{SelectValue};
+use crate::select_value::SelectValue;
 use json_path::{
-    CalculationResult,
-    PTrackerGenerator,
-    PathCalculator,
-    Query,
-    QueryCompilationError,
-    DummyTrackerGenerator,
-    DummyTracker,
-    PTracker,
-    UserPathTracker,
+    CalculationResult, DummyTracker, DummyTrackerGenerator, PTracker, PTrackerGenerator,
+    PathCalculator, Query, QueryCompilationError, UserPathTracker,
 };
 
 /// Create a PathCalculator object. The path calculator can be re-used
@@ -61,8 +54,8 @@ pub fn create_with_generator<'i>(query: &'i Query<'i>) -> PathCalculator<'i, PTr
 }
 
 /// Compile the given json path, compilation results can after be used
-/// to create PathCalculator calculator object to calculate json paths
-pub fn compile<'i>(s: &'i str) -> Result<Query<'i>, QueryCompilationError> {
+/// to create `PathCalculator` calculator object to calculate json paths
+pub fn compile(s: &str) -> Result<Query, QueryCompilationError> {
     json_path::compile(s)
 }
 
@@ -70,41 +63,50 @@ pub fn compile<'i>(s: &'i str) -> Result<Query<'i>, QueryCompilationError> {
 /// The query ownership is taken so it can not be used after. This allows
 /// the get a better performance if there is a need to calculate the query
 /// only once.
-pub fn calc_once<'j, 'p, S:SelectValue>(mut q: Query<'j>, json: &'p S) -> Vec<&'p S> {
+pub fn calc_once<'j, 'p, S: SelectValue>(mut q: Query<'j>, json: &'p S) -> Vec<&'p S> {
     let root = q.query.next().unwrap();
     PathCalculator::<'p, DummyTrackerGenerator> {
         query: None,
         tracker_generator: None,
-    }.calc_with_paths_on_root(json, root).into_iter().map(|e: CalculationResult<'p, S, DummyTracker>| e.res).collect()
+    }
+    .calc_with_paths_on_root(json, root)
+    .into_iter()
+    .map(|e: CalculationResult<'p, S, DummyTracker>| e.res)
+    .collect()
 }
 
 /// A version of `calc_once` that returns also paths.
-pub fn calc_once_with_paths<'j, 'p, S:SelectValue>(mut q: Query<'j>, json: &'p S) -> Vec<CalculationResult<'p, S, PTracker>> {
+pub fn calc_once_with_paths<'j, 'p, S: SelectValue>(
+    mut q: Query<'j>,
+    json: &'p S,
+) -> Vec<CalculationResult<'p, S, PTracker>> {
     let root = q.query.next().unwrap();
     PathCalculator {
         query: None,
         tracker_generator: Some(PTrackerGenerator),
-    }.calc_with_paths_on_root(json, root)
+    }
+    .calc_with_paths_on_root(json, root)
 }
 
 /// A version of `calc_once` that returns only paths as Vec<Vec<String>>.
-pub fn calc_once_paths<'j, 'p, S:SelectValue>(mut q: Query<'j>, json: &'p S) -> Vec<Vec<String>> {
+pub fn calc_once_paths<S: SelectValue>(mut q: Query, json: &S) -> Vec<Vec<String>> {
     let root = q.query.next().unwrap();
     PathCalculator {
         query: None,
         tracker_generator: Some(PTrackerGenerator),
-    }.calc_with_paths_on_root(json, root).into_iter().map(|e| {
-        e.path_tracker.unwrap().to_string_path()
-    }).collect()
+    }
+    .calc_with_paths_on_root(json, root)
+    .into_iter()
+    .map(|e| e.path_tracker.unwrap().to_string_path())
+    .collect()
 }
-
 
 #[cfg(test)]
 mod json_path_tests {
     use serde_json::json;
     use serde_json::Value;
     // fn setup() {
-        
+
     // }
 
     fn perform_search<'a>(path: &str, json: &'a Value) -> Vec<&'a Value> {
