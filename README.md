@@ -1,17 +1,17 @@
-[![license](https://img.shields.io/github/license/RedisJSON/JsonPathCalculator.svg)](https://github.com/RedisJSON/JsonPathCalculator/blob/master/LICENSE)
-[![GitHub issues](https://img.shields.io/github/release/RedisJSON/JsonPathCalculator.svg)](https://github.com/RedisJSON/JsonPathCalculator/releases/latest)
-[![Rust](https://github.com/RedisJSON/JsonPathCalculator/actions/workflows/rust.yml/badge.svg)](https://github.com/RedisJSON/JsonPathCalculator/actions/workflows/rust.yml)
-[![crates.io](https://img.shields.io/crates/v/JsonPathCalculator.svg)](https://crates.io/crates/JsonPathCalculator)
+[![license](https://img.shields.io/github/license/RedisJSON/jsonpath_rs.svg)](https://github.com/RedisJSON/jsonpath_rs/blob/master/LICENSE)
+[![GitHub issues](https://img.shields.io/github/release/RedisJSON/jsonpath_rs.svg)](https://github.com/RedisJSON/jsonpath_rs/releases/latest)
+[![Rust](https://github.com/RedisJSON/jsonpath_rs/actions/workflows/rust.yml/badge.svg)](https://github.com/RedisJSON/jsonpath_rs/actions/workflows/rust.yml)
+[![crates.io](https://img.shields.io/crates/v/jsonpath_rs.svg)](https://crates.io/crates/jsonpath_rs)
 
-# JsonPathCalculator
-Json path calculator library for rust. The idea behind this library is that it can operate on any json representation as long as it implements the [`SelectValue`](src/select_value.rs) triat. The library has an implementation for [serde_json value](https://docs.serde.rs/serde_json/value/enum.Value.html) and [ivalue](https://docs.rs/tch/0.1.1/tch/enum.IValue.html).
+# jsonpath_rs
+A JSONPath library for rust. The idea behind this library is that it can operate on any json representation as long as it implements the [`SelectValue`](src/select_value.rs) triat. The library has an implementation for [serde_json value](https://docs.serde.rs/serde_json/value/enum.Value.html) and [ivalue](https://docs.rs/tch/0.1.1/tch/enum.IValue.html).
 
 ### Getting Started
 Add the following to your cargo.toml
 
 ```rust
 [dependencies]
-jsonpath_rs = { git = "https://github.com/RedisJSON/JsonPathCalculator.git", branch = "master" }
+jsonpath_rs = { git = "https://github.com/RedisJSON/jsonpath_rs.git", branch = "master" }
 ```
 
 Usage example:
