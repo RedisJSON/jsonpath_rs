@@ -4,6 +4,9 @@
 [![crates.io](https://img.shields.io/crates/v/jsonpath_rs.svg)](https://crates.io/crates/jsonpath_rs)
 
 # jsonpath_rs
+[![Forum](https://img.shields.io/badge/Forum-RedisJSON-blue)](https://forum.redislabs.com/c/modules/redisjson)
+[![Discord](https://img.shields.io/discord/697882427875393627?style=flat-square)](https://discord.gg/QUkjSsk)
+
 A JSONPath library for rust. The idea behind this library is that it can operate on any json representation as long as it implements the [`SelectValue`](src/select_value.rs) triat. The library has an implementation for [serde_json value](https://docs.serde.rs/serde_json/value/enum.Value.html) and [ivalue](https://docs.rs/tch/0.1.1/tch/enum.IValue.html).
 
 ### Getting Started
@@ -22,7 +25,7 @@ extern crate jsonpath_rs
 
 fn main() {
     let mut query = jsonpath_rs::compile("$..friends[0]");
-    let calculator = jsonpath_rs::create(&query)
+    let path = jsonpath_rs::create(&query)
 
     let json_obj = json!({
         "school": {
@@ -37,7 +40,7 @@ fn main() {
         ]
     });
 
-    let json = calculator.calc(&json_obj);
+    let json = path.calc(&json_obj);
 
     assert_eq!(json, vec![
         &json!({"name": "foo3", "age": 30}),
