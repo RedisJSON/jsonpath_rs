@@ -24,7 +24,7 @@ extern crate jsonpath_rs
 #[macro_use] extern crate serde_json;
 
 fn main() {
-    let mut query = jsonpath_rs::compile("$..friends[0]");
+    let query = jsonpath_rs::compile("$..friends[0]");
     let path = jsonpath_rs::create(&query)
 
     let json_obj = json!({

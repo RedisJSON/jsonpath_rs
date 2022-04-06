@@ -19,7 +19,7 @@ use json_path::{
 /// extern crate jsonpath_rs
 /// #[macro_use] extern crate serde_json;
 ///
-/// let mut query = jsonpath_rs::compile("$..friends[0]");
+/// let query = jsonpath_rs::compile("$..friends[0]");
 /// let calculator = jsonpath_rs::create(&query)
 ///
 /// let json_obj = json!({
