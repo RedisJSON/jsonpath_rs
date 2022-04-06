@@ -2,7 +2,7 @@ use std::io::Read;
 
 use serde_json::Value;
 
-use jsonpath_calculator::{compile, create};
+use jsonpath_rs::{compile, create};
 
 #[allow(dead_code)]
 pub fn setup() {}
