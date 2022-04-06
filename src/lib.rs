@@ -16,11 +16,11 @@ use json_path::{
 /// Create a PathCalculator object. The path calculator can be re-used
 /// to calculate json paths on different jsons.
 /// /// ```rust
-/// extern crate jsonpath_calculator
+/// extern crate jsonpath_rs
 /// #[macro_use] extern crate serde_json;
 ///
-/// let mut query = jsonpath_calculator::compile("$..friends[0]");
-/// let calculator = jsonpath_calculator::create(&query)
+/// let mut query = jsonpath_rs::compile("$..friends[0]");
+/// let calculator = jsonpath_rs::create(&query)
 ///
 /// let json_obj = json!({
 ///     "school": {

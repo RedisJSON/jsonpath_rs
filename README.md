@@ -11,18 +11,18 @@ Add the following to your cargo.toml
 
 ```rust
 [dependencies]
-jsonpath_calculator = { git = "https://github.com/RedisJSON/JsonPathCalculator.git", branch = "master" }
+jsonpath_rs = { git = "https://github.com/RedisJSON/JsonPathCalculator.git", branch = "master" }
 ```
 
 Usage example:
 
 ```rust
-extern crate jsonpath_calculator
+extern crate jsonpath_rs
 #[macro_use] extern crate serde_json;
 
 fn main() {
-    let mut query = jsonpath_calculator::compile("$..friends[0]");
-    let calculator = jsonpath_calculator::create(&query)
+    let mut query = jsonpath_rs::compile("$..friends[0]");
+    let calculator = jsonpath_rs::create(&query)
 
     let json_obj = json!({
         "school": {
@@ -47,7 +47,7 @@ fn main() {
 ```
 
 ### Tests
-`jsonpath_calculator` pass **Almost** all the tests on https://github.com/freestrings/jsonpath, to run the tests:
+`jsonpath_rs` pass **Almost** all the tests on https://github.com/freestrings/jsonpath, to run the tests:
 
 ```rust
 cargo test
