@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["Meir Shpilraien <meir@redis.com>"]
 edition = "2021"
 description = "A JsonPath engine written in Rust"
-license = "Server Side Public License"
 license-file = "LICENSE"
 repository = "https://github.com/RedisJSON/jsonpath_rs"
 readme = "README.md"
