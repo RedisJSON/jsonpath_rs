@@ -1,4 +1,3 @@
-[![license](https://img.shields.io/github/license/RedisJSON/jsonpath_rs.svg)](https://github.com/RedisJSON/jsonpath_rs/blob/master/LICENSE)
 [![GitHub issues](https://img.shields.io/github/release/RedisJSON/jsonpath_rs.svg)](https://github.com/RedisJSON/jsonpath_rs/releases/latest)
 [![Rust](https://github.com/RedisJSON/jsonpath_rs/actions/workflows/rust.yml/badge.svg)](https://github.com/RedisJSON/jsonpath_rs/actions/workflows/rust.yml)
 [![crates.io](https://img.shields.io/crates/v/jsonpath_rs.svg)](https://crates.io/crates/jsonpath_rs)
