@@ -63,8 +63,8 @@ pub fn compile(s: &str) -> Result<Query, QueryCompilationError> {
 /// The query ownership is taken so it can not be used after. This allows
 /// the get a better performance if there is a need to calculate the query
 /// only once.
-pub fn calc_once<'j, 'p, S: SelectValue>(mut q: Query<'j>, json: &'p S) -> Vec<&'p S> {
-    let root = q.query.next().unwrap();
+pub fn calc_once<'j, 'p, S: SelectValue>(q: Query<'j>, json: &'p S) -> Vec<&'p S> {
+    let root = q.root;
     PathCalculator::<'p, DummyTrackerGenerator> {
         query: None,
         tracker_generator: None,
@@ -77,10 +77,10 @@ pub fn calc_once<'j, 'p, S: SelectValue>(mut q: Query<'j>, json: &'p S) -> Vec<&
 
 /// A version of `calc_once` that returns also paths.
 pub fn calc_once_with_paths<'j, 'p, S: SelectValue>(
-    mut q: Query<'j>,
+    q: Query<'j>,
     json: &'p S,
 ) -> Vec<CalculationResult<'p, S, PTracker>> {
-    let root = q.query.next().unwrap();
+    let root = q.root;
     PathCalculator {
         query: None,
         tracker_generator: Some(PTrackerGenerator),
@@ -89,8 +89,8 @@ pub fn calc_once_with_paths<'j, 'p, S: SelectValue>(
 }
 
 /// A version of `calc_once` that returns only paths as Vec<Vec<String>>.
-pub fn calc_once_paths<S: SelectValue>(mut q: Query, json: &S) -> Vec<Vec<String>> {
-    let root = q.query.next().unwrap();
+pub fn calc_once_paths<S: SelectValue>(q: Query, json: &S) -> Vec<Vec<String>> {
+    let root = q.root;
     PathCalculator {
         query: None,
         tracker_generator: Some(PTrackerGenerator),
