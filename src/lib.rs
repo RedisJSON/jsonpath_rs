@@ -59,7 +59,7 @@ pub fn compile(s: &str) -> Result<Query, QueryCompilationError> {
     json_path::compile(s)
 }
 
-/// Calc once allows to performe a one time calculation on the give query.
+/// Calc once allows to perform a one time calculation on the give query.
 /// The query ownership is taken so it can not be used after. This allows
 /// the get a better performance if there is a need to calculate the query
 /// only once.
@@ -115,7 +115,7 @@ mod json_path_tests {
         path_calculator.calc(json)
     }
 
-    fn perform_path_search<'a>(path: &str, json: &'a Value) -> Vec<Vec<String>> {
+    fn perform_path_search(path: &str, json: &Value) -> Vec<Vec<String>> {
         let query = crate::compile(path).unwrap();
         let path_calculator = crate::create_with_generator(&query);
         path_calculator.calc_paths(json)
@@ -142,9 +142,9 @@ mod json_path_tests {
     ) => {
         let j = json!($json);
         let res = perform_path_search($path, &j);
-        let mut v = Vec::new();
+        let mut v = vec![];
         $(
-            let mut s = Vec::new();
+            let mut s = vec![];
             $(
                 s.push(stringify!($result));
             )*
