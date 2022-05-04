@@ -38,17 +38,11 @@ impl<'i> Query<'i> {
                 Rule::number => Some((last.as_str().to_string(), JsonPathToken::Number)),
                 Rule::numbers_list => {
                     let first_on_list = last.into_inner().next();
-                    match first_on_list {
-                        Some(first) => Some((first.as_str().to_string(), JsonPathToken::Number)),
-                        None => None,
-                    }
+                    first_on_list.map(|first| (first.as_str().to_string(), JsonPathToken::Number))
                 }
                 Rule::string_list => {
                     let first_on_list = last.into_inner().next();
-                    match first_on_list {
-                        Some(first) => Some((first.as_str().to_string(), JsonPathToken::String)),
-                        None => None,
-                    }
+                    first_on_list.map(|first| (first.as_str().to_string(), JsonPathToken::String))
                 }
                 _ => panic!("pop last was used in a none static path"),
             },
@@ -65,14 +59,14 @@ impl<'i> Query<'i> {
     }
 
     pub fn is_static(&mut self) -> bool {
-        if self.is_static.is_some() {
-            return *self.is_static.as_ref().unwrap();
+        if let Some(s) = self.is_static {
+            return s;
         }
         let mut size = 0;
         let mut is_static = true;
-        let mut root_copy = self.root.clone();
-        while let Some(n) = root_copy.next() {
-            size = size + 1;
+        let root_copy = self.root.clone();
+        for n in root_copy {
+            size += 1;
             match n.as_rule() {
                 Rule::literal | Rule::number => continue,
                 Rule::numbers_list | Rule::string_list => {
@@ -94,7 +88,7 @@ impl std::fmt::Display for QueryCompilationError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "Error accured on possition {}, {}",
+            "Error occurred on position {}, {}",
             self.location, self.message
         )
     }
@@ -223,19 +217,19 @@ pub enum PTrackerElement {
 
 #[derive(Debug, PartialEq)]
 pub struct PTracker {
-    pub elemenets: Vec<PTrackerElement>,
+    pub elements: Vec<PTrackerElement>,
 }
 impl UserPathTracker for PTracker {
     fn add_str(&mut self, s: &str) {
-        self.elemenets.push(PTrackerElement::Key(s.to_string()));
+        self.elements.push(PTrackerElement::Key(s.to_string()));
     }
 
     fn add_index(&mut self, i: usize) {
-        self.elemenets.push(PTrackerElement::Index(i));
+        self.elements.push(PTrackerElement::Index(i));
     }
 
     fn to_string_path(self) -> Vec<String> {
-        self.elemenets
+        self.elements
             .into_iter()
             .map(|e| match e {
                 PTrackerElement::Key(s) => s,
@@ -250,7 +244,7 @@ impl UserPathTrackerGenerator for PTrackerGenerator {
     type PT = PTracker;
     fn generate(&self) -> Self::PT {
         PTracker {
-            elemenets: Vec::new(),
+            elements: Vec::new(),
         }
     }
 }
@@ -307,7 +301,7 @@ enum TermEvaluationResult<'i, 'j, S: SelectValue> {
 
 enum CmpResult {
     Ord(Ordering),
-    NotCmparable,
+    NotComparable,
 }
 
 impl<'i, 'j, S: SelectValue> TermEvaluationResult<'i, 'j, S> {
@@ -347,45 +341,45 @@ impl<'i, 'j, S: SelectValue> TermEvaluationResult<'i, 'j, S> {
                 SelectValueType::Long => TermEvaluationResult::Integer(v.get_long()).cmp(s),
                 SelectValueType::Double => TermEvaluationResult::Float(v.get_double()).cmp(s),
                 SelectValueType::String => TermEvaluationResult::Str(v.as_str()).cmp(s),
-                _ => CmpResult::NotCmparable,
+                _ => CmpResult::NotComparable,
             },
             (_, TermEvaluationResult::Value(v)) => match v.get_type() {
                 SelectValueType::Long => self.cmp(&TermEvaluationResult::Integer(v.get_long())),
                 SelectValueType::Double => self.cmp(&TermEvaluationResult::Float(v.get_double())),
                 SelectValueType::String => self.cmp(&TermEvaluationResult::Str(v.as_str())),
-                _ => CmpResult::NotCmparable,
+                _ => CmpResult::NotComparable,
             },
             (TermEvaluationResult::Invalid, _) | (_, TermEvaluationResult::Invalid) => {
-                CmpResult::NotCmparable
+                CmpResult::NotComparable
             }
-            (_, _) => CmpResult::NotCmparable,
+            (_, _) => CmpResult::NotComparable,
         }
     }
     fn gt(&self, s: &Self) -> bool {
         match self.cmp(s) {
             CmpResult::Ord(o) => o.is_gt(),
-            CmpResult::NotCmparable => false,
+            CmpResult::NotComparable => false,
         }
     }
 
     fn ge(&self, s: &Self) -> bool {
         match self.cmp(s) {
             CmpResult::Ord(o) => o.is_ge(),
-            CmpResult::NotCmparable => false,
+            CmpResult::NotComparable => false,
         }
     }
 
     fn lt(&self, s: &Self) -> bool {
         match self.cmp(s) {
             CmpResult::Ord(o) => o.is_lt(),
-            CmpResult::NotCmparable => false,
+            CmpResult::NotComparable => false,
         }
     }
 
     fn le(&self, s: &Self) -> bool {
         match self.cmp(s) {
             CmpResult::Ord(o) => o.is_le(),
-            CmpResult::NotCmparable => false,
+            CmpResult::NotComparable => false,
         }
     }
 
@@ -404,7 +398,7 @@ impl<'i, 'j, S: SelectValue> TermEvaluationResult<'i, 'j, S> {
             (TermEvaluationResult::Value(v1), TermEvaluationResult::Value(v2)) => v1 == v2,
             (_, _) => match self.cmp(s) {
                 CmpResult::Ord(o) => o.is_eq(),
-                CmpResult::NotCmparable => false,
+                CmpResult::NotComparable => false,
             },
         }
     }
@@ -915,7 +909,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                     Rule::filter => {
                         if flat_arrays_on_filter && json.get_type() == SelectValueType::Array {
                             /* lets expend the array, this is how most json path engines work.
-                             * Pesonally, I think this if should not exists. */
+                             * Personally, I think this if should not exists. */
                             let values = json.values().unwrap();
                             if let Some(pt) = path_tracker {
                                 for (i, v) in values.enumerate() {
@@ -1028,7 +1022,7 @@ mod json_path_compiler_tests {
     }
 
     #[test]
-    fn test_compiler_pop_last_string_brucket_notation() {
+    fn test_compiler_pop_last_string_bracket_notation() {
         let query = compile("$.[\"foo\"]");
         assert_eq!(
             query.unwrap().pop_last().unwrap(),
