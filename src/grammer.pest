@@ -69,4 +69,4 @@ query = _{SOI ~ "$" ~ root? ~ EOI}
 
 simple_query = _{SOI ~ "$" ~ simple_root ~ EOI}
 
-WHITESPACE = _{ " " }
+WHITESPACE = _{ " " | "\r\n" | "\n" | "\r" | "\t" }
