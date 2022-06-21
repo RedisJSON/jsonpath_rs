@@ -319,3 +319,12 @@ fn unimplemented_in_filter() {
         json!([]),
     );
 }
+
+#[test]
+fn whitespace() {
+    select_and_then_compare(
+        "$\n[\r?\t(\r\n@\r.a == 1)]",
+        json!({"a": 1}),
+        json!([{"a" : 1}]),
+    );
+}

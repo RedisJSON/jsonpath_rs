@@ -21,6 +21,8 @@ pub struct QueryCompilationError {
     message: String,
 }
 
+impl std::error::Error for QueryCompilationError {}
+
 impl std::fmt::Display for QueryCompilationError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(
