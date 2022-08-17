@@ -319,3 +319,80 @@ fn unimplemented_in_filter() {
         json!([]),
     );
 }
+
+// #[test]
+// fn filter_nested() {
+//     setup();
+
+//     select_and_then_compare(
+//         "$.store.book[?(@.authors[?(@.lastName == 'Rees')])].title",
+//         json!([
+//             {
+//                 "store": {
+//                     "book": [
+//                         {
+//                             "authors": [
+//                                 {
+//                                     "firstName": "Nigel",
+//                                     "lastName": "Rees"
+//                                 },
+//                                 {
+//                                     "firstName": "Evelyn",
+//                                     "lastName": "Waugh"
+//                                 }
+//                             ],
+//                             "title": "Sayings of the Century"
+//                         },
+//                         {
+//                             "authors": [
+//                                 {
+//                                     "firstName": "Herman",
+//                                     "lastName": "Melville"
+//                                 },
+//                                 {
+//                                     "firstName": "Somebody",
+//                                     "lastName": "Else"
+//                                 }
+//                             ],
+//                             "title": "Moby Dick"
+//                         }
+//                     ]
+//                 }
+//             }
+//         ]),
+//         json!(["Sayings of the Century"]),
+//     );
+// }
+
+// #[test]
+// fn filter_inner() {
+//     setup();
+
+//     select_and_then_compare(
+//         "$['a'][?(@.inner.for.inner=='u8')].id",
+//         json!([
+//             {
+//                 "a": {
+//                   "id": "0:4",
+//                   "inner": {
+//                     "for": {"inner": "u8", "kind": "primitive"}
+//                   }
+//                 }
+//             }
+//         ]),
+//         json!(["0:4"]),
+//     );
+// }
+
+#[test]
+fn op_object_or_nonexisting_default() {
+    setup();
+
+    select_and_then_compare(
+        "$.friends[?(@.id >= 2 || @.id == 4)]",
+        read_json("./json_examples/data_obj.json"),
+        json!([
+            { "id" : 2, "name" : "Gray Berry" }
+        ]),
+    );
+}

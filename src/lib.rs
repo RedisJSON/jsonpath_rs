@@ -48,7 +48,7 @@ pub fn create<'i>(query: &'i Query<'i>) -> PathCalculator<'i, DummyTrackerGenera
 /// Create a PathCalculator object. The path calculator can be re-used
 /// to calculate json paths on different jsons.
 /// Unlike create(), this function will return results with full path as PTracker object.
-/// It is possible to create your own path tracker by implement the PTrackerGenerator triat.
+/// It is possible to create your own path tracker by implement the PTrackerGenerator trait.
 pub fn create_with_generator<'i>(query: &'i Query<'i>) -> PathCalculator<'i, PTrackerGenerator> {
     PathCalculator::create_with_generator(query, PTrackerGenerator)
 }
