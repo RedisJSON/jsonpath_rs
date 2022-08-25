@@ -9,16 +9,85 @@ use std::fmt::Debug;
 #[grammar = "grammer.pest"]
 pub struct JsonPathParser;
 
+#[derive(Debug, PartialEq)]
+pub enum JsonPathToken {
+    String,
+    Number,
+}
+
 #[derive(Debug)]
 pub struct Query<'i> {
     // query: QueryElement<'i>
-    pub query: Pairs<'i, Rule>,
+    pub root: Pairs<'i, Rule>,
+    is_static: Option<bool>,
+    size: Option<usize>,
 }
 
 #[derive(Debug)]
 pub struct QueryCompilationError {
     location: usize,
     message: String,
+}
+
+impl<'i> Query<'i> {
+    pub fn pop_last(&mut self) -> Option<(String, JsonPathToken)> {
+        let last = self.root.next_back();
+        match last {
+            Some(last) => match last.as_rule() {
+                Rule::literal => Some((last.as_str().to_string(), JsonPathToken::String)),
+                Rule::number => Some((last.as_str().to_string(), JsonPathToken::Number)),
+                Rule::numbers_list => {
+                    let first_on_list = last.into_inner().next();
+                    match first_on_list {
+                        Some(first) => Some((first.as_str().to_string(), JsonPathToken::Number)),
+                        None => None,
+                    }
+                }
+                Rule::string_list => {
+                    let first_on_list = last.into_inner().next();
+                    match first_on_list {
+                        Some(first) => Some((first.as_str().to_string(), JsonPathToken::String)),
+                        None => None,
+                    }
+                }
+                _ => panic!("pop last was used in a none static path"),
+            },
+            None => None,
+        }
+    }
+
+    pub fn size(&mut self) -> usize {
+        if self.size.is_some() {
+            return *self.size.as_ref().unwrap();
+        }
+        self.is_static();
+        self.size()
+    }
+
+    pub fn is_static(&mut self) -> bool {
+        if self.is_static.is_some() {
+            return *self.is_static.as_ref().unwrap();
+        }
+        let mut size = 0;
+        let mut is_static = true;
+        let mut root_copy = self.root.clone();
+        while let Some(n) = root_copy.next() {
+            size = size + 1;
+            match n.as_rule() {
+                Rule::literal | Rule::number => continue,
+                Rule::numbers_list | Rule::string_list => {
+                    let inner = n.into_inner();
+                    if inner.count() > 1 {
+                        is_static = false;
+                    }
+                }
+                _ => is_static = false,
+            }
+        }
+        self.size = Some(size);
+        self.is_static = Some(is_static);
+        self.is_static()
+    }
 }
 
 impl std::fmt::Display for QueryCompilationError {
@@ -50,7 +119,14 @@ impl std::fmt::Display for Rule {
 pub(crate) fn compile(path: &str) -> Result<Query, QueryCompilationError> {
     let query = JsonPathParser::parse(Rule::query, path);
     match query {
-        Ok(q) => Ok(Query { query: q }),
+        Ok(mut q) => {
+            let root = q.next().unwrap();
+            Ok(Query {
+                root: root.into_inner(),
+                is_static: None,
+                size: None,
+            })
+        }
         // pest::error::Error
         Err(e) => {
             let pos = match e.location {
@@ -199,7 +275,10 @@ const fn create_empty_trucker<'i, 'j>() -> PathTracker<'i, 'j> {
     }
 }
 
-const fn create_str_trucker<'i, 'j>(s: &'i str, father: &'j PathTracker<'i, 'j>) -> PathTracker<'i, 'j> {
+const fn create_str_trucker<'i, 'j>(
+    s: &'i str,
+    father: &'j PathTracker<'i, 'j>,
+) -> PathTracker<'i, 'j> {
     PathTracker {
         father: Some(father),
         element: PathTrackerElement::Key(s),
@@ -883,7 +962,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
     pub fn calc_with_paths_on_root<'j: 'i, S: SelectValue>(
         &self,
         json: &'j S,
-        root: Pair<Rule>,
+        root: Pairs<'i, Rule>,
     ) -> Vec<CalculationResult<'j, S, UPTG::PT>> {
         let mut calc_data = PathCalculatorData {
             results: Vec::new(),
@@ -891,14 +970,14 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
         };
         if self.tracker_generator.is_some() {
             self.calc_internal(
-                root.into_inner(),
+                root,
                 json,
                 Some(create_empty_trucker()),
                 &mut calc_data,
                 true,
             );
         } else {
-            self.calc_internal(root.into_inner(), json, None, &mut calc_data, true);
+            self.calc_internal(root, json, None, &mut calc_data, true);
         }
         calc_data.results.drain(..).collect()
     }
@@ -907,7 +986,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
         &self,
         json: &'j S,
     ) -> Vec<CalculationResult<'j, S, UPTG::PT>> {
-        self.calc_with_paths_on_root(json, self.query.unwrap().query.clone().next().unwrap())
+        self.calc_with_paths_on_root(json, self.query.unwrap().root.clone())
     }
 
     pub fn calc<'j: 'i, S: SelectValue>(&self, json: &'j S) -> Vec<&'j S> {
@@ -922,5 +1001,59 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
             .into_iter()
             .map(|e| e.path_tracker.unwrap().to_string_path())
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod json_path_compiler_tests {
+    use crate::json_path::compile;
+    use crate::json_path::JsonPathToken;
+
+    #[test]
+    fn test_compiler_pop_last() {
+        let query = compile("$.foo");
+        assert_eq!(
+            query.unwrap().pop_last().unwrap(),
+            ("foo".to_string(), JsonPathToken::String)
+        );
+    }
+
+    #[test]
+    fn test_compiler_pop_last_number() {
+        let query = compile("$.[1]");
+        assert_eq!(
+            query.unwrap().pop_last().unwrap(),
+            ("1".to_string(), JsonPathToken::Number)
+        );
+    }
+
+    #[test]
+    fn test_compiler_pop_last_string_brucket_notation() {
+        let query = compile("$.[\"foo\"]");
+        assert_eq!(
+            query.unwrap().pop_last().unwrap(),
+            ("foo".to_string(), JsonPathToken::String)
+        );
+    }
+
+    #[test]
+    fn test_compiler_is_static() {
+        let query = compile("$.[\"foo\"]");
+        assert!(query.unwrap().is_static());
+
+        let query = compile("$.[\"foo\", \"bar\"]");
+        assert!(!query.unwrap().is_static());
+    }
+
+    #[test]
+    fn test_compiler_size() {
+        let query = compile("$.[\"foo\"]");
+        assert_eq!(query.unwrap().size(), 1);
+
+        let query = compile("$.[\"foo\"].bar");
+        assert_eq!(query.unwrap().size(), 2);
+
+        let query = compile("$.[\"foo\"].bar[1]");
+        assert_eq!(query.unwrap().size(), 3);
     }
 }
