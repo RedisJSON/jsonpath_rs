@@ -100,6 +100,8 @@ impl std::fmt::Display for QueryCompilationError {
     }
 }
 
+impl std::error::Error for QueryCompilationError {}
+
 impl std::fmt::Display for Rule {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
