@@ -776,12 +776,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                         results: Vec::new(),
                         root: calc_data.root,
                     };
-                    self.calc_internal(
-                        term.into_inner(),
-                        calc_data.root,
-                        None,
-                        &mut new_calc_data,
-                    );
+                    self.calc_internal(term.into_inner(), calc_data.root, None, &mut new_calc_data);
                     if new_calc_data.results.len() == 1 {
                         TermEvaluationResult::Value(new_calc_data.results.pop().unwrap().res)
                     } else {
@@ -884,12 +879,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
             Some(curr) => {
                 match curr.as_rule() {
                     Rule::full_scan => {
-                        self.calc_internal(
-                            pairs.clone(),
-                            json,
-                            path_tracker.clone(),
-                            calc_data,
-                        );
+                        self.calc_internal(pairs.clone(), json, path_tracker.clone(), calc_data);
                         self.calc_full_scan(pairs, json, path_tracker, calc_data);
                     }
                     Rule::all => self.calc_all(pairs, json, path_tracker, calc_data),
@@ -904,7 +894,9 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                         self.calc_range(pairs, curr, json, path_tracker, calc_data);
                     }
                     Rule::filter => {
-                        if json.get_type() == SelectValueType::Array || json.get_type() == SelectValueType::Object {
+                        if json.get_type() == SelectValueType::Array
+                            || json.get_type() == SelectValueType::Object
+                        {
                             /* lets expend the array, this is how most json path engines work.
                              * Pesonally, I think this if should not exists. */
                             let values = json.values().unwrap();
@@ -959,12 +951,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
             root: json,
         };
         if self.tracker_generator.is_some() {
-            self.calc_internal(
-                root,
-                json,
-                Some(create_empty_tracker()),
-                &mut calc_data,
-            );
+            self.calc_internal(root, json, Some(create_empty_tracker()), &mut calc_data);
         } else {
             self.calc_internal(root, json, None, &mut calc_data);
         }

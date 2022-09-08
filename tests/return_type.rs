@@ -70,10 +70,10 @@ fn return_type_for_object_filter_true() {
         "$.school[?(1==1)]",
         read_json("./json_examples/data_obj.json"),
         json!([[
-                {"id": 0, "name": "Millicent Norman"},
-                {"id": 1, "name": "Vincent Cannon" },
-                {"id": 2, "name": "Gray Berry"}
-            ]]),
+            {"id": 0, "name": "Millicent Norman"},
+            {"id": 1, "name": "Vincent Cannon" },
+            {"id": 2, "name": "Gray Berry"}
+        ]]),
     );
 }
 

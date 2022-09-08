@@ -327,37 +327,37 @@ fn filter_nested() {
     select_and_then_compare(
         "$.store.book[?(@.authors[?(@.lastName == 'Rees')])].title",
         json!({
-                "store": {
-                    "book": [
-                        {
-                            "authors": [
-                                {
-                                    "firstName": "Nigel",
-                                    "lastName": "Rees"
-                                },
-                                {
-                                    "firstName": "Evelyn",
-                                    "lastName": "Waugh"
-                                }
-                            ],
-                            "title": "Sayings of the Century"
-                        },
-                        {
-                            "authors": [
-                                {
-                                    "firstName": "Herman",
-                                    "lastName": "Melville"
-                                },
-                                {
-                                    "firstName": "Somebody",
-                                    "lastName": "Else"
-                                }
-                            ],
-                            "title": "Moby Dick"
-                        }
-                    ]
-                }
-            }),
+            "store": {
+                "book": [
+                    {
+                        "authors": [
+                            {
+                                "firstName": "Nigel",
+                                "lastName": "Rees"
+                            },
+                            {
+                                "firstName": "Evelyn",
+                                "lastName": "Waugh"
+                            }
+                        ],
+                        "title": "Sayings of the Century"
+                    },
+                    {
+                        "authors": [
+                            {
+                                "firstName": "Herman",
+                                "lastName": "Melville"
+                            },
+                            {
+                                "firstName": "Somebody",
+                                "lastName": "Else"
+                            }
+                        ],
+                        "title": "Moby Dick"
+                    }
+                ]
+            }
+        }),
         json!(["Sayings of the Century"]),
     );
 }
@@ -369,14 +369,14 @@ fn filter_inner() {
     select_and_then_compare(
         "$[?(@.inner.for.inner=='u8')].id",
         json!(
-            {
-                "a": {
-                  "id": "0:4",
-                  "inner": {
-                    "for": {"inner": "u8", "kind": "primitive"}
-                  }
-                }
-            }),
+        {
+            "a": {
+              "id": "0:4",
+              "inner": {
+                "for": {"inner": "u8", "kind": "primitive"}
+              }
+            }
+        }),
         json!(["0:4"]),
     );
 }
