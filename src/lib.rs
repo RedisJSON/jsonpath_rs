@@ -370,17 +370,17 @@ mod json_path_tests {
 
     #[test]
     fn test_filter_and() {
-        verify_json!(path:"$[?@.foo[0] == 1 && @foo[1] == 2].foo[0,1,2]", json:{"foo":[1,2,3], "bar":[4,5,6]}, results:[1,2,3]);
+        verify_json!(path:"$[?@.foo[0] == 1 && @foo[1] == 2].foo[0,1,2]", json:[{"foo":[1,2,3], "bar":[4,5,6]}], results:[1,2,3]);
     }
 
     #[test]
     fn test_filter_or() {
-        verify_json!(path:"$[?@.foo[0] == 2 || @.bar[0] == 4].*[0,1,2]", json:{"foo":[1,2,3], "bar":[4,5,6]}, results:[1,2,3,4,5,6]);
+        verify_json!(path:"$[?@.foo[0] == 2 || @.bar[0] == 4].*[0,1,2]", json:[{"foo":[1,2,3], "bar":[4,5,6]}], results:[1,2,3,4,5,6]);
     }
 
     #[test]
     fn test_complex_filter() {
-        verify_json!(path:"$[?(@.foo[0] == 1 && @.foo[2] == 3)||(@.bar[0]==4&&@.bar[2]==6)].*[0,1,2]", json:{"foo":[1,2,3], "bar":[4,5,6]}, results:[1,2,3,4,5,6]);
+        verify_json!(path:"$[?(@.foo[0] == 1 && @.foo[2] == 3)||(@.bar[0]==4&&@.bar[2]==6)].*[0,1,2]", json:[{"foo":[1,2,3], "bar":[4,5,6]}], results:[1,2,3,4,5,6]);
     }
 
     #[test]
@@ -395,9 +395,9 @@ mod json_path_tests {
 
     #[test]
     fn test_filter_with_all() {
-        verify_json!(path:"$.*.[?(@.code==\"2\")].code", json:[{"code":"1"},{"code":"2"}], results:["2"]);
-        verify_json!(path:"$.*[?(@.code==\"2\")].code", json:[{"code":"1"},{"code":"2"}], results:["2"]);
-        verify_json!(path:"$*[?(@.code==\"2\")].code", json:[{"code":"1"},{"code":"2"}], results:["2"]);
+        verify_json!(path:"$.*.[?(@.code==\"2\")].code", json:[[{"code":"1"},{"code":"2"}]], results:["2"]);
+        verify_json!(path:"$.*[?(@.code==\"2\")].code", json:[[{"code":"1"},{"code":"2"}]], results:["2"]);
+        verify_json!(path:"$*[?(@.code==\"2\")].code", json:[[{"code":"1"},{"code":"2"}]], results:["2"]);
     }
 
     #[test]
@@ -416,7 +416,7 @@ mod json_path_tests {
     #[test]
     fn test_complex_filter_with_literal() {
         verify_json!(path:"$.foo[?@.a == @.b].boo[:]",
-                     json:{"foo":{"boo":[1,2,3],"a":1,"b":1}},
+                     json:{"foo":[{"boo":[1,2,3],"a":1,"b":1}]},
                      results:[1,2,3]);
     }
 

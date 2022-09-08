@@ -10,15 +10,13 @@ fn op_object_eq() {
     setup();
 
     select_and_then_compare(
-        "$.school[?(@.friends == @.friends)]",
+        "$.school[?(@ == @)]",
         read_json("./json_examples/data_obj.json"),
-        json!([{
-            "friends": [
+        json!([[
                 {"id": 0, "name": "Millicent Norman"},
                 {"id": 1, "name": "Vincent Cannon" },
                 {"id": 2, "name": "Gray Berry"}
-            ]
-        }]),
+            ]]),
     );
 }
 
@@ -136,42 +134,42 @@ fn op_ge() {
 fn op_eq_for_number() {
     setup();
 
-    select_and_then_compare("$.[?(@.a == 1)]", json!({ "a": 1 }), json!([{ "a": 1 }]));
+    select_and_then_compare("$.[?(@ == 1)]", json!({ "a": 1 }), json!([1]));
 }
 
 #[test]
 fn op_ne_for_number() {
     setup();
 
-    select_and_then_compare("$.[?(@.a != 2)]", json!({ "a": 1 }), json!([{ "a": 1 }]));
+    select_and_then_compare("$.[?(@ != 2)]", json!({ "a": 1 }), json!([1]));
 }
 
 #[test]
 fn op_lt_for_number() {
     setup();
 
-    select_and_then_compare("$.[?(@.a < 2)]", json!({ "a": 1 }), json!([{ "a": 1 }]));
+    select_and_then_compare("$.[?(@ < 2)]", json!({ "a": 1 }), json!([1]));
 }
 
 #[test]
 fn op_le_for_number() {
     setup();
 
-    select_and_then_compare("$.[?(@.a <= 1)]", json!({ "a": 1 }), json!([{ "a": 1 }]));
+    select_and_then_compare("$.[?(@ <= 1)]", json!({ "a": 1 }), json!([1]));
 }
 
 #[test]
 fn op_gt_for_number() {
     setup();
 
-    select_and_then_compare("$.[?(@.a > 0)]", json!({ "a": 1 }), json!([{ "a": 1 }]));
+    select_and_then_compare("$.[?(@ > 0)]", json!({ "a": 1 }), json!([1]));
 }
 
 #[test]
 fn op_ge_for_number() {
     setup();
 
-    select_and_then_compare("$.[?(@.a >= 0)]", json!({ "a": 1 }), json!([{ "a": 1 }]));
+    select_and_then_compare("$.[?(@ >= 0)]", json!({ "a": 1 }), json!([1]));
 }
 
 #[test]
@@ -180,7 +178,7 @@ fn op_eq_for_string_value() {
 
     select_and_then_compare(
         r#"$.[?(@.a == "b")]"#,
-        json!({ "a": "b" }),
+        json!([{ "a": "b" }]),
         json!([{ "a": "b" }]),
     );
 }
@@ -191,7 +189,7 @@ fn op_ne_for_string_value() {
 
     select_and_then_compare(
         r#"$.[?(@.a != "c")]"#,
-        json!({ "a": "b" }),
+        json!([{ "a": "b" }]),
         json!([{ "a": "b" }]),
     );
 }
@@ -209,7 +207,7 @@ fn op_le_for_string_value() {
 
     select_and_then_compare(
         r#"$.[?(@.a <= "b")]"#,
-        json!({ "a": "b" }),
+        json!([{ "a": "b" }]),
         json!([{ "a": "b" }]),
     );
 }
@@ -227,7 +225,7 @@ fn op_ge_for_string_value() {
 
     select_and_then_compare(
         r#"$.[?(@.a >= "b")]"#,
-        json!({ "a": "b" }),
+        json!([{ "a": "b" }]),
         json!([{ "a": "b" }]),
     );
 }
@@ -238,7 +236,7 @@ fn op_eq_for_object_value() {
 
     select_and_then_compare(
         r#"$.[?(@.a == @.c)]"#,
-        json!({"a": { "1": 1 }, "b": { "2": 2 }, "c": { "1": 1 }}),
+        json!([{"a": { "1": 1 }, "b": { "2": 2 }, "c": { "1": 1 }}]),
         json!([{"a": { "1": 1 }, "b": { "2": 2 }, "c": { "1": 1 }}]),
     );
 }
@@ -249,7 +247,7 @@ fn op_ne_for_object_value() {
 
     select_and_then_compare(
         r#"$.[?(@.a != @.c)]"#,
-        json!({"a": { "1": 1 }, "b": { "2": 2 }, "c": { "1": 1 }}),
+        json!([{"a": { "1": 1 }, "b": { "2": 2 }, "c": { "1": 1 }}]),
         json!([]),
     );
 }
@@ -311,7 +309,7 @@ fn op_ne_for_complex_value() {
 
     select_and_then_compare(
         r#"$.[?("1" != @.a)]"#,
-        json!({ "a": { "b": 1 } }),
+        json!([{ "a": { "b": 1 } }]),
         json!([{ "a": { "b": 1 } }]),
     );
 }
@@ -352,11 +350,11 @@ fn op_for_same_type() {
 
     select_and_then_compare(
         r#"$..[?(@.a == 1)]"#,
-        json!({
+        json!([{
             "a": 1,
             "b" : {"a": 1},
             "c" : {"a": 1}
-        }),
+        }]),
         json!([
             {
                 "a": 1,
