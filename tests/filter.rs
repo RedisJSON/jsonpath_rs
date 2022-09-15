@@ -101,6 +101,18 @@ fn filter_parent_with_matched_child() {
            }
         ]),
     );
+
+    select_and_then_compare(
+        "$.a[?(@.b.c == 1)]",
+        json!({
+            "a": {
+                "b": {
+                    "c": 1
+                }
+            }
+        }),
+        json!([]),
+    );
 }
 
 #[test]
