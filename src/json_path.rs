@@ -15,6 +15,7 @@ pub enum JsonPathToken {
     Number,
 }
 
+/* Struct that represent a compiled json path query. */
 #[derive(Debug)]
 pub struct Query<'i> {
     // query: QueryElement<'i>
@@ -30,6 +31,10 @@ pub struct QueryCompilationError {
 }
 
 impl<'i> Query<'i> {
+    /// Pop the last element from the compiled json path.
+    /// For example, if the json path is $.foo.bar then pop_last
+    /// will return bar and leave the json path query with foo only
+    /// ($.foo)
     #[allow(dead_code)]
     pub fn pop_last(&mut self) -> Option<(String, JsonPathToken)> {
         let last = self.root.next_back();
@@ -57,6 +62,8 @@ impl<'i> Query<'i> {
         }
     }
 
+    /// Returns the amount of elements in the json path
+    /// Example: $.foo.bar have 2 elements
     #[allow(dead_code)]
     pub fn size(&mut self) -> usize {
         if self.size.is_some() {
@@ -66,6 +73,11 @@ impl<'i> Query<'i> {
         self.size()
     }
 
+    /// Results whether or not the compiled json path is static
+    /// Static path is a path that is promised to have at most a single result.
+    /// Example:
+    ///     static path: $.foo.bar
+    ///     none static path: $.*.bar
     #[allow(dead_code)]
     pub fn is_static(&mut self) -> bool {
         if self.is_static.is_some() {
@@ -119,6 +131,8 @@ impl std::fmt::Display for Rule {
     }
 }
 
+/// Compire the given string query into a query object.
+/// Returns error on compilation error.
 pub(crate) fn compile(path: &str) -> Result<Query, QueryCompilationError> {
     let query = JsonPathParser::parse(Rule::query, path);
     match query {
@@ -201,6 +215,7 @@ pub trait UserPathTrackerGenerator {
     fn generate(&self) -> Self::PT;
 }
 
+/* Dummy path tracker, indicating that there is no need to track results paths. */
 pub struct DummyTracker;
 impl UserPathTracker for DummyTracker {
     fn add_str(&mut self, _s: &str) {}
@@ -210,6 +225,7 @@ impl UserPathTracker for DummyTracker {
     }
 }
 
+/* A dummy path tracker generator, indicating that there is no need to track results paths. */
 pub struct DummyTrackerGenerator;
 impl UserPathTrackerGenerator for DummyTrackerGenerator {
     type PT = DummyTracker;
@@ -224,6 +240,7 @@ pub enum PTrackerElement {
     Index(usize),
 }
 
+/* An actual representation of a path that the user get as a result. */
 #[derive(Debug, PartialEq)]
 pub struct PTracker {
     pub elemenets: Vec<PTrackerElement>,
@@ -248,6 +265,7 @@ impl UserPathTracker for PTracker {
     }
 }
 
+/* Used to generate paths trackers. */
 pub struct PTrackerGenerator;
 impl UserPathTrackerGenerator for PTrackerGenerator {
     type PT = PTracker;
@@ -265,6 +283,12 @@ enum PathTrackerElement<'i> {
     Root,
 }
 
+/* Struct that used to track paths of query results.
+ * This struct is used to hold the path that lead to the
+ * current location (when calculating the json path).
+ * Once we have a match we can run (in a reverse order)
+ * on the path tracker and add the path to the result as
+ * a PTracker object. */
 #[derive(Clone)]
 struct PathTracker<'i, 'j> {
     parent: Option<&'j PathTracker<'i, 'j>>,
@@ -298,6 +322,7 @@ const fn create_index_tracker<'i, 'j>(
     }
 }
 
+/* Enum for filter results */
 enum TermEvaluationResult<'i, 'j, S: SelectValue> {
     Integer(i64),
     Float(f64),
@@ -413,6 +438,9 @@ impl<'i, 'j, S: SelectValue> TermEvaluationResult<'i, 'j, S> {
     }
 }
 
+/* This struct is used to calculate a json path on a json object.
+ * The struct contains the query and the tracker generator that allows to create
+ * path tracker to tracker paths that lead to different results. */
 #[derive(Debug)]
 pub struct PathCalculator<'i, UPTG: UserPathTrackerGenerator> {
     pub query: Option<&'i Query<'i>>,
