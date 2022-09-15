@@ -113,3 +113,20 @@ fn dolla_token_in_path() {
         ]),
     );
 }
+
+#[test]
+fn colon_token_in_path() {
+    setup();
+
+    let payload = json!({
+        "prod:id": "G637",
+        "prod_name": "coffee table",
+        "price": 194
+    });
+
+    select_and_then_compare("$.price", payload.clone(), json!([194]));
+
+    select_and_then_compare("$.prod_name", payload.clone(), json!(["coffee table"]));
+
+    select_and_then_compare("$.prod:id", payload.clone(), json!(["G637"]));
+}

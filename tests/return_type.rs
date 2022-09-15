@@ -41,15 +41,13 @@ fn return_type_for_child_object_matched() {
     setup();
 
     select_and_then_compare(
-        "$.school[?(@.friends[0])]",
+        "$.school[?(@[0])]",
         read_json("./json_examples/data_obj.json"),
-        json!([{
-            "friends": [
+        json!([[
                 {"id": 0, "name": "Millicent Norman"},
                 {"id": 1, "name": "Vincent Cannon" },
                 {"id": 2, "name": "Gray Berry"}
-            ]
-        }]),
+        ]]),
     );
 }
 
@@ -71,13 +69,11 @@ fn return_type_for_object_filter_true() {
     select_and_then_compare(
         "$.school[?(1==1)]",
         read_json("./json_examples/data_obj.json"),
-        json!([{
-            "friends": [
-                {"id": 0, "name": "Millicent Norman"},
-                {"id": 1, "name": "Vincent Cannon" },
-                {"id": 2, "name": "Gray Berry"}
-            ]
-        }]),
+        json!([[
+            {"id": 0, "name": "Millicent Norman"},
+            {"id": 1, "name": "Vincent Cannon" },
+            {"id": 2, "name": "Gray Berry"}
+        ]]),
     );
 }
 

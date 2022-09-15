@@ -15,6 +15,7 @@ pub enum JsonPathToken {
     Number,
 }
 
+/* Struct that represent a compiled json path query. */
 #[derive(Debug)]
 pub struct Query<'i> {
     // query: QueryElement<'i>
@@ -30,6 +31,11 @@ pub struct QueryCompilationError {
 }
 
 impl<'i> Query<'i> {
+    /// Pop the last element from the compiled json path.
+    /// For example, if the json path is $.foo.bar then pop_last
+    /// will return bar and leave the json path query with foo only
+    /// ($.foo)
+    #[allow(dead_code)]
     pub fn pop_last(&mut self) -> Option<(String, JsonPathToken)> {
         let last = self.root.next_back();
         match last {
@@ -56,17 +62,26 @@ impl<'i> Query<'i> {
         }
     }
 
+    /// Returns the amount of elements in the json path
+    /// Example: $.foo.bar has 2 elements
+    #[allow(dead_code)]
     pub fn size(&mut self) -> usize {
         if self.size.is_some() {
-            return *self.size.as_ref().unwrap();
+            return self.size.unwrap();
         }
         self.is_static();
         self.size()
     }
 
+    /// Results whether or not the compiled json path is static
+    /// Static path is a path that is promised to have at most a single result.
+    /// Example:
+    ///     static path: $.foo.bar
+    ///     none static path: $.*.bar
+    #[allow(dead_code)]
     pub fn is_static(&mut self) -> bool {
         if self.is_static.is_some() {
-            return *self.is_static.as_ref().unwrap();
+            return self.is_static.unwrap();
         }
         let mut size = 0;
         let mut is_static = true;
@@ -116,6 +131,8 @@ impl std::fmt::Display for Rule {
     }
 }
 
+/// Compile the given string query into a query object.
+/// Returns error on compilation error.
 pub(crate) fn compile(path: &str) -> Result<Query, QueryCompilationError> {
     let query = JsonPathParser::parse(Rule::query, path);
     match query {
@@ -198,6 +215,7 @@ pub trait UserPathTrackerGenerator {
     fn generate(&self) -> Self::PT;
 }
 
+/* Dummy path tracker, indicating that there is no need to track results paths. */
 pub struct DummyTracker;
 impl UserPathTracker for DummyTracker {
     fn add_str(&mut self, _s: &str) {}
@@ -207,6 +225,7 @@ impl UserPathTracker for DummyTracker {
     }
 }
 
+/* A dummy path tracker generator, indicating that there is no need to track results paths. */
 pub struct DummyTrackerGenerator;
 impl UserPathTrackerGenerator for DummyTrackerGenerator {
     type PT = DummyTracker;
@@ -221,6 +240,7 @@ pub enum PTrackerElement {
     Index(usize),
 }
 
+/* An actual representation of a path that the user gets as a result. */
 #[derive(Debug, PartialEq)]
 pub struct PTracker {
     pub elemenets: Vec<PTrackerElement>,
@@ -245,6 +265,7 @@ impl UserPathTracker for PTracker {
     }
 }
 
+/* Used to generate paths trackers. */
 pub struct PTrackerGenerator;
 impl UserPathTrackerGenerator for PTrackerGenerator {
     type PT = PTracker;
@@ -262,39 +283,46 @@ enum PathTrackerElement<'i> {
     Root,
 }
 
+/* Struct that used to track paths of query results.
+ * This struct is used to hold the path that lead to the
+ * current location (when calculating the json path).
+ * Once we have a match we can run (in a reverse order)
+ * on the path tracker and add the path to the result as
+ * a PTracker object. */
 #[derive(Clone)]
 struct PathTracker<'i, 'j> {
-    father: Option<&'j PathTracker<'i, 'j>>,
+    parent: Option<&'j PathTracker<'i, 'j>>,
     element: PathTrackerElement<'i>,
 }
 
-const fn create_empty_trucker<'i, 'j>() -> PathTracker<'i, 'j> {
+const fn create_empty_tracker<'i, 'j>() -> PathTracker<'i, 'j> {
     PathTracker {
-        father: None,
+        parent: None,
         element: PathTrackerElement::Root,
     }
 }
 
-const fn create_str_trucker<'i, 'j>(
+const fn create_str_tracker<'i, 'j>(
     s: &'i str,
-    father: &'j PathTracker<'i, 'j>,
+    parent: &'j PathTracker<'i, 'j>,
 ) -> PathTracker<'i, 'j> {
     PathTracker {
-        father: Some(father),
+        parent: Some(parent),
         element: PathTrackerElement::Key(s),
     }
 }
 
-const fn create_index_trucker<'i, 'j>(
+const fn create_index_tracker<'i, 'j>(
     index: usize,
-    father: &'j PathTracker<'i, 'j>,
+    parent: &'j PathTracker<'i, 'j>,
 ) -> PathTracker<'i, 'j> {
     PathTracker {
-        father: Some(father),
+        parent: Some(parent),
         element: PathTrackerElement::Index(index),
     }
 }
 
+/* Enum for filter results */
 enum TermEvaluationResult<'i, 'j, S: SelectValue> {
     Integer(i64),
     Float(f64),
@@ -343,21 +371,23 @@ impl<'i, 'j, S: SelectValue> TermEvaluationResult<'i, 'j, S> {
             (TermEvaluationResult::String(s1), TermEvaluationResult::String(s2)) => {
                 CmpResult::Ord(s1.cmp(s2))
             }
+            (TermEvaluationResult::Bool(b1), TermEvaluationResult::Bool(b2)) => {
+                CmpResult::Ord(b1.cmp(b2))
+            }
             (TermEvaluationResult::Value(v), _) => match v.get_type() {
                 SelectValueType::Long => TermEvaluationResult::Integer(v.get_long()).cmp(s),
                 SelectValueType::Double => TermEvaluationResult::Float(v.get_double()).cmp(s),
                 SelectValueType::String => TermEvaluationResult::Str(v.as_str()).cmp(s),
+                SelectValueType::Bool => TermEvaluationResult::Bool(v.get_bool()).cmp(s),
                 _ => CmpResult::NotCmparable,
             },
             (_, TermEvaluationResult::Value(v)) => match v.get_type() {
                 SelectValueType::Long => self.cmp(&TermEvaluationResult::Integer(v.get_long())),
                 SelectValueType::Double => self.cmp(&TermEvaluationResult::Float(v.get_double())),
                 SelectValueType::String => self.cmp(&TermEvaluationResult::Str(v.as_str())),
+                SelectValueType::Bool => self.cmp(&TermEvaluationResult::Bool(v.get_bool())),
                 _ => CmpResult::NotCmparable,
             },
-            (TermEvaluationResult::Invalid, _) | (_, TermEvaluationResult::Invalid) => {
-                CmpResult::NotCmparable
-            }
             (_, _) => CmpResult::NotCmparable,
         }
     }
@@ -391,16 +421,6 @@ impl<'i, 'j, S: SelectValue> TermEvaluationResult<'i, 'j, S> {
 
     fn eq(&self, s: &Self) -> bool {
         match (self, s) {
-            (TermEvaluationResult::Bool(b1), TermEvaluationResult::Bool(b2)) => *b1 == *b2,
-            (TermEvaluationResult::Value(v1), TermEvaluationResult::Bool(b2)) => {
-                if v1.get_type() == SelectValueType::Bool {
-                    let b1 = v1.get_bool();
-                    b1 == *b2
-                } else {
-                    false
-                }
-            }
-            (TermEvaluationResult::Bool(_), TermEvaluationResult::Value(_)) => s.eq(self),
             (TermEvaluationResult::Value(v1), TermEvaluationResult::Value(v2)) => v1 == v2,
             (_, _) => match self.cmp(s) {
                 CmpResult::Ord(o) => o.is_eq(),
@@ -418,6 +438,9 @@ impl<'i, 'j, S: SelectValue> TermEvaluationResult<'i, 'j, S> {
     }
 }
 
+/* This struct is used to calculate a json path on a json object.
+ * The struct contains the query and the tracker generator that allows to create
+ * path tracker to tracker paths that lead to different results. */
 #[derive(Debug)]
 pub struct PathCalculator<'i, UPTG: UserPathTrackerGenerator> {
     pub query: Option<&'i Query<'i>>,
@@ -444,6 +467,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn create_with_generator(
         query: &'i Query<'i>,
         tracker_generator: UPTG,
@@ -469,21 +493,20 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                         self.calc_internal(
                             pairs.clone(),
                             val,
-                            Some(create_str_trucker(key, &pt)),
+                            Some(create_str_tracker(key, &pt)),
                             calc_data,
-                            false,
                         );
                         self.calc_full_scan(
                             pairs.clone(),
                             val,
-                            Some(create_str_trucker(key, &pt)),
+                            Some(create_str_tracker(key, &pt)),
                             calc_data,
                         );
                     }
                 } else {
                     let values = json.values().unwrap();
                     for v in values {
-                        self.calc_internal(pairs.clone(), v, None, calc_data, false);
+                        self.calc_internal(pairs.clone(), v, None, calc_data);
                         self.calc_full_scan(pairs.clone(), v, None, calc_data);
                     }
                 }
@@ -495,20 +518,19 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                         self.calc_internal(
                             pairs.clone(),
                             v,
-                            Some(create_index_trucker(i, &pt)),
+                            Some(create_index_tracker(i, &pt)),
                             calc_data,
-                            false,
                         );
                         self.calc_full_scan(
                             pairs.clone(),
                             v,
-                            Some(create_index_trucker(i, &pt)),
+                            Some(create_index_tracker(i, &pt)),
                             calc_data,
                         );
                     }
                 } else {
                     for v in values {
-                        self.calc_internal(pairs.clone(), v, None, calc_data, false);
+                        self.calc_internal(pairs.clone(), v, None, calc_data);
                         self.calc_full_scan(pairs.clone(), v, None, calc_data);
                     }
                 }
@@ -529,13 +551,13 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                 if let Some(pt) = path_tracker {
                     let items = json.items().unwrap();
                     for (key, val) in items {
-                        let new_tracker = Some(create_str_trucker(key, &pt));
-                        self.calc_internal(pairs.clone(), val, new_tracker, calc_data, true);
+                        let new_tracker = Some(create_str_tracker(key, &pt));
+                        self.calc_internal(pairs.clone(), val, new_tracker, calc_data);
                     }
                 } else {
                     let values = json.values().unwrap();
                     for v in values {
-                        self.calc_internal(pairs.clone(), v, None, calc_data, true);
+                        self.calc_internal(pairs.clone(), v, None, calc_data);
                     }
                 }
             }
@@ -543,12 +565,12 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                 let values = json.values().unwrap();
                 if let Some(pt) = path_tracker {
                     for (i, v) in values.enumerate() {
-                        let new_tracker = Some(create_index_trucker(i, &pt));
-                        self.calc_internal(pairs.clone(), v, new_tracker, calc_data, true);
+                        let new_tracker = Some(create_index_tracker(i, &pt));
+                        self.calc_internal(pairs.clone(), v, new_tracker, calc_data);
                     }
                 } else {
                     for v in values {
-                        self.calc_internal(pairs.clone(), v, None, calc_data, true);
+                        self.calc_internal(pairs.clone(), v, None, calc_data);
                     }
                 }
             }
@@ -567,10 +589,10 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
         let curr_val = json.get_key(curr.as_str());
         if let Some(e) = curr_val {
             if let Some(pt) = path_tracker {
-                let new_tracker = Some(create_str_trucker(curr.as_str(), &pt));
-                self.calc_internal(pairs, e, new_tracker, calc_data, true);
+                let new_tracker = Some(create_str_tracker(curr.as_str(), &pt));
+                self.calc_internal(pairs, e, new_tracker, calc_data);
             } else {
-                self.calc_internal(pairs, e, None, calc_data, true);
+                self.calc_internal(pairs, e, None, calc_data);
             }
         }
     }
@@ -597,8 +619,8 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                     _ => panic!("{}", format!("{:?}", c)),
                 };
                 if let Some(e) = curr_val {
-                    let new_tracker = Some(create_str_trucker(s, &pt));
-                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data, true);
+                    let new_tracker = Some(create_str_tracker(s, &pt));
+                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data);
                 }
             }
         } else {
@@ -615,7 +637,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                     _ => panic!("{}", format!("{:?}", c)),
                 };
                 if let Some(e) = curr_val {
-                    self.calc_internal(pairs.clone(), e, None, calc_data, true);
+                    self.calc_internal(pairs.clone(), e, None, calc_data);
                 }
             }
         }
@@ -646,8 +668,8 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                 let i = self.calc_abs_index(c.as_str().parse::<i64>().unwrap(), n);
                 let curr_val = json.get_index(i);
                 if let Some(e) = curr_val {
-                    let new_tracker = Some(create_index_trucker(i, &pt));
-                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data, true);
+                    let new_tracker = Some(create_index_tracker(i, &pt));
+                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data);
                 }
             }
         } else {
@@ -655,7 +677,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                 let i = self.calc_abs_index(c.as_str().parse::<i64>().unwrap(), n);
                 let curr_val = json.get_index(i);
                 if let Some(e) = curr_val {
-                    self.calc_internal(pairs.clone(), e, None, calc_data, true);
+                    self.calc_internal(pairs.clone(), e, None, calc_data);
                 }
             }
         }
@@ -724,15 +746,15 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
             for i in (start..end).step_by(step) {
                 let curr_val = json.get_index(i);
                 if let Some(e) = curr_val {
-                    let new_tracker = Some(create_index_trucker(i, &pt));
-                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data, true);
+                    let new_tracker = Some(create_index_tracker(i, &pt));
+                    self.calc_internal(pairs.clone(), e, new_tracker, calc_data);
                 }
             }
         } else {
             for i in (start..end).step_by(step) {
                 let curr_val = json.get_index(i);
                 if let Some(e) = curr_val {
-                    self.calc_internal(pairs.clone(), e, None, calc_data, true);
+                    self.calc_internal(pairs.clone(), e, None, calc_data);
                 }
             }
         }
@@ -767,7 +789,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                         results: Vec::new(),
                         root: json,
                     };
-                    self.calc_internal(term.into_inner(), json, None, &mut calc_data, false);
+                    self.calc_internal(term.into_inner(), json, None, &mut calc_data);
                     if calc_data.results.len() == 1 {
                         TermEvaluationResult::Value(calc_data.results.pop().unwrap().res)
                     } else {
@@ -782,13 +804,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                         results: Vec::new(),
                         root: calc_data.root,
                     };
-                    self.calc_internal(
-                        term.into_inner(),
-                        calc_data.root,
-                        None,
-                        &mut new_calc_data,
-                        false,
-                    );
+                    self.calc_internal(term.into_inner(), calc_data.root, None, &mut new_calc_data);
                     if new_calc_data.results.len() == 1 {
                         TermEvaluationResult::Value(new_calc_data.results.pop().unwrap().res)
                     } else {
@@ -863,7 +879,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
     }
 
     fn populate_path_tracker<'k, 'l>(&self, pt: &PathTracker<'l, 'k>, upt: &mut UPTG::PT) {
-        if let Some(f) = pt.father {
+        if let Some(f) = pt.parent {
             self.populate_path_tracker(f, upt);
         }
         match pt.element {
@@ -885,20 +901,13 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
         json: &'j S,
         path_tracker: Option<PathTracker<'l, 'k>>,
         calc_data: &mut PathCalculatorData<'j, S, UPTG::PT>,
-        flat_arrays_on_filter: bool,
     ) {
         let curr = pairs.next();
         match curr {
             Some(curr) => {
                 match curr.as_rule() {
                     Rule::full_scan => {
-                        self.calc_internal(
-                            pairs.clone(),
-                            json,
-                            path_tracker.clone(),
-                            calc_data,
-                            false,
-                        );
+                        self.calc_internal(pairs.clone(), json, path_tracker.clone(), calc_data);
                         self.calc_full_scan(pairs, json, path_tracker, calc_data);
                     }
                     Rule::all => self.calc_all(pairs, json, path_tracker, calc_data),
@@ -913,32 +922,33 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
                         self.calc_range(pairs, curr, json, path_tracker, calc_data);
                     }
                     Rule::filter => {
-                        if flat_arrays_on_filter && json.get_type() == SelectValueType::Array {
+                        if json.get_type() == SelectValueType::Array
+                            || json.get_type() == SelectValueType::Object
+                        {
                             /* lets expend the array, this is how most json path engines work.
                              * Pesonally, I think this if should not exists. */
                             let values = json.values().unwrap();
                             if let Some(pt) = path_tracker {
                                 for (i, v) in values.enumerate() {
                                     if self.evaluate_filter(curr.clone(), v, calc_data) {
-                                        let new_tracker = Some(create_index_trucker(i, &pt));
+                                        let new_tracker = Some(create_index_tracker(i, &pt));
                                         self.calc_internal(
                                             pairs.clone(),
                                             v,
                                             new_tracker,
                                             calc_data,
-                                            true,
                                         );
                                     }
                                 }
                             } else {
                                 for v in values {
                                     if self.evaluate_filter(curr.clone(), v, calc_data) {
-                                        self.calc_internal(pairs.clone(), v, None, calc_data, true);
+                                        self.calc_internal(pairs.clone(), v, None, calc_data);
                                     }
                                 }
                             }
                         } else if self.evaluate_filter(curr.clone(), json, calc_data) {
-                            self.calc_internal(pairs, json, path_tracker, calc_data, true);
+                            self.calc_internal(pairs, json, path_tracker, calc_data);
                         }
                     }
                     Rule::EOI => {
@@ -969,15 +979,9 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
             root: json,
         };
         if self.tracker_generator.is_some() {
-            self.calc_internal(
-                root,
-                json,
-                Some(create_empty_trucker()),
-                &mut calc_data,
-                true,
-            );
+            self.calc_internal(root, json, Some(create_empty_tracker()), &mut calc_data);
         } else {
-            self.calc_internal(root, json, None, &mut calc_data, true);
+            self.calc_internal(root, json, None, &mut calc_data);
         }
         calc_data.results.drain(..).collect()
     }
@@ -996,6 +1000,7 @@ impl<'i, UPTG: UserPathTrackerGenerator> PathCalculator<'i, UPTG> {
             .collect()
     }
 
+    #[allow(dead_code)]
     pub fn calc_paths<'j: 'i, S: SelectValue>(&self, json: &'j S) -> Vec<Vec<String>> {
         self.calc_with_paths(json)
             .into_iter()

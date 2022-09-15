@@ -107,8 +107,8 @@ impl SelectValue for Value {
     fn get_long(&self) -> i64 {
         match self {
             Value::Number(n) => {
-                if n.is_i64() || n.is_u64() {
-                    n.as_i64().unwrap()
+                if let Some(n) = n.as_i64() {
+                    n
                 } else {
                     panic!("not a long");
                 }
@@ -155,9 +155,10 @@ impl SelectValue for IValue {
     }
 
     fn contains_key(&self, key: &str) -> bool {
-        match self.as_object() {
-            Some(o) => o.contains_key(key),
-            _ => false,
+        if let Some(o) = self.as_object() {
+            o.contains_key(key)
+        } else {
+            false
         }
     }
 
@@ -247,7 +248,7 @@ impl SelectValue for IValue {
                 }
             }
             _ => {
-                panic!("not a long");
+                panic!("not a number");
             }
         }
     }
@@ -262,7 +263,7 @@ impl SelectValue for IValue {
                 }
             }
             _ => {
-                panic!("not a double");
+                panic!("not a number");
             }
         }
     }

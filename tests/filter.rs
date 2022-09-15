@@ -85,7 +85,7 @@ fn filter_parent_with_matched_child() {
     setup();
 
     select_and_then_compare(
-        "$.a[?(@.b.c == 1)]",
+        "$[?(@.b.c == 1)]",
         json!({
             "a": {
                 "b": {
@@ -101,6 +101,18 @@ fn filter_parent_with_matched_child() {
            }
         ]),
     );
+
+    select_and_then_compare(
+        "$.a[?(@.b.c == 1)]",
+        json!({
+            "a": {
+                "b": {
+                    "c": 1
+                }
+            }
+        }),
+        json!([]),
+    );
 }
 
 #[test]
@@ -108,7 +120,7 @@ fn filter_parent_exist_child() {
     setup();
 
     select_and_then_compare(
-        "$.a[?(@.b.c)]",
+        "$[?(@.b.c)]",
         json!({
             "a": {
                 "b": {
@@ -270,9 +282,9 @@ fn bugs38_array_notation_in_filter() {
     select_and_then_compare(
         "$..key[?(@['subKey'] == 'subKey2')]",
         json!([
-           {"key": {"seq": 1, "subKey": "subKey1"}},
-           {"key": {"seq": 2, "subKey": "subKey2"}},
-           {"key": 42},
+           {"key": [{"seq": 1, "subKey": "subKey1"}]},
+           {"key": [{"seq": 2, "subKey": "subKey2"}]},
+           {"key": [42]},
            {"some": "value"}
         ]),
         json!([{"seq": 2, "subKey": "subKey2"}]),
@@ -317,5 +329,79 @@ fn unimplemented_in_filter() {
         "$.store[?(@.book['authors', 'title'])]",
         json.clone(),
         json!([]),
+    );
+}
+
+#[test]
+fn filter_nested() {
+    setup();
+
+    select_and_then_compare(
+        "$.store.book[?(@.authors[?(@.lastName == 'Rees')])].title",
+        json!({
+            "store": {
+                "book": [
+                    {
+                        "authors": [
+                            {
+                                "firstName": "Nigel",
+                                "lastName": "Rees"
+                            },
+                            {
+                                "firstName": "Evelyn",
+                                "lastName": "Waugh"
+                            }
+                        ],
+                        "title": "Sayings of the Century"
+                    },
+                    {
+                        "authors": [
+                            {
+                                "firstName": "Herman",
+                                "lastName": "Melville"
+                            },
+                            {
+                                "firstName": "Somebody",
+                                "lastName": "Else"
+                            }
+                        ],
+                        "title": "Moby Dick"
+                    }
+                ]
+            }
+        }),
+        json!(["Sayings of the Century"]),
+    );
+}
+
+#[test]
+fn filter_inner() {
+    setup();
+
+    select_and_then_compare(
+        "$[?(@.inner.for.inner=='u8')].id",
+        json!(
+        {
+            "a": {
+              "id": "0:4",
+              "inner": {
+                "for": {"inner": "u8", "kind": "primitive"}
+              }
+            }
+        }),
+        json!(["0:4"]),
+    );
+}
+
+#[test]
+fn op_object_or_nonexisting_default() {
+    setup();
+
+    select_and_then_compare(
+        "$.friends[?(@.id >= 2 || @.id == 4)]",
+        read_json("./json_examples/data_obj.json"),
+        json!([
+            { "id" : 2, "name" : "Gray Berry" }
+        ]),
     );
 }
