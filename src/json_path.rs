@@ -63,7 +63,7 @@ impl<'i> Query<'i> {
     }
 
     /// Returns the amount of elements in the json path
-    /// Example: $.foo.bar have 2 elements
+    /// Example: $.foo.bar has 2 elements
     #[allow(dead_code)]
     pub fn size(&mut self) -> usize {
         if self.size.is_some() {
@@ -131,7 +131,7 @@ impl std::fmt::Display for Rule {
     }
 }
 
-/// Compire the given string query into a query object.
+/// Compile the given string query into a query object.
 /// Returns error on compilation error.
 pub(crate) fn compile(path: &str) -> Result<Query, QueryCompilationError> {
     let query = JsonPathParser::parse(Rule::query, path);
@@ -240,7 +240,7 @@ pub enum PTrackerElement {
     Index(usize),
 }
 
-/* An actual representation of a path that the user get as a result. */
+/* An actual representation of a path that the user gets as a result. */
 #[derive(Debug, PartialEq)]
 pub struct PTracker {
     pub elemenets: Vec<PTrackerElement>,
